@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io"
@@ -17,13 +18,13 @@ import (
 	"github.com/dlclark/regexp2"
 )
 
-type myjar struct {
-	jar map[string][]*http.Cookie
-}
-
 type IndexedUrl struct {
 	i int
 	u []byte
+}
+
+type myjar struct {
+	jar map[string][]*http.Cookie
 }
 
 func (p *myjar) SetCookies(u *url.URL, cookies []*http.Cookie) {
@@ -161,37 +162,26 @@ func Downloader(id int, c *http.Client, path string, filename string, jobs <-cha
 }
 
 func main() {
+	// initializing reader
+	reader := bufio.NewReader(os.Stdin)
+
 	// Getting the page link
 	fmt.Print("Inserisci il link alla pagina dell'anime: ")
-	var link string
-	_, err := fmt.Scan(&link)
-	if err != nil {
-		log.Printf("Errore durante la lettura: %s", err)
-		return
-	}
+	link, _ := reader.ReadString('\n')
+	link = strings.TrimSpace(link)
 
 	// Getting the first and last episodes to download
 	fmt.Print("Inserisci il primo episodio da scaricare: ")
-	var primoStr string
+	primoStr, _ := reader.ReadString('\n')
 	var primo int
-	_, err = fmt.Scan(&primoStr)
-	if err != nil {
-		log.Printf("Errore durante la lettura: %s", err)
-		return
-	}
 	if i, err := strconv.Atoi(primoStr); err == nil {
 		primo = i
 	} else {
 		primo = 0
 	}
 	fmt.Print("Inserisci l'ultimo episodio da scaricare: ")
-	var ultimoStr string
+	ultimoStr, _ := reader.ReadString('\n')
 	var ultimo int
-	_, err = fmt.Scan(&ultimoStr)
-	if err != nil {
-		log.Printf("Errore durante la lettura: %s", err)
-		return
-	}
 	if i, err := strconv.Atoi(ultimoStr); err == nil {
 		ultimo = i
 	} else {
@@ -199,38 +189,23 @@ func main() {
 	}
 
 	// Getting the path where to store the downloads
-	var path string
-	if wd, err := os.Getwd(); err == nil {
-		path = wd
-	} else {
-		log.Printf("Errore durante il controllo della workdir: %s", err)
-		return
-	}
+	path, _ := os.Getwd()
 	fmt.Printf("Inserisci il percorso dove salvare i file [Vuoto per: \"%s\"]: ", path)
-	var pathNew string
-	_, err = fmt.Scan(&pathNew)
-	if err != nil {
-		log.Printf("Errore durante la lettura: %s", err)
-		return
-	}
+	pathNew, _ := reader.ReadString('\n')
+	pathNew = strings.TrimSpace(pathNew)
 	if filepath.IsAbs(pathNew) {
 		path = pathNew
 	} else {
 		path = filepath.Join(path, pathNew)
 	}
 	if err := os.MkdirAll(path, 0777); err != nil {
-		log.Printf("Errore durante la creazione della directory: %s", err)
-		return
+		log.Panicf("Errore durante la creazione della directory: %s", err)
 	}
 
 	// Getting filenames
 	fmt.Print("Inserisci il nome per i file: ")
-	var filename string
-	_, err = fmt.Scan(&filename)
-	if err != nil {
-		log.Printf("Errore durante la lettura: %s", err)
-		return
-	}
+	filename, _ := reader.ReadString('\n')
+	filename = strings.TrimSpace(filename)
 
 	var startTime = time.Now()
 	// Setting up session
@@ -239,35 +214,44 @@ func main() {
 	log.Print("Sessione creata!")
 
 	// getting episode links
+	log.Print("Cercando i link agli episodi...")
 	var episodi [][]byte
 	if e, err := GetEpisodeLinks(client, link); err == nil {
 		episodi = e
 	} else {
-		log.Printf("Errore nello scraping di link: %s", err)
+		log.Panicf("Errore nello scraping dei link agli episodi: %s", err)
 	}
 	if bytes.Equal(episodi[0], []byte("NOT FOUND")) && primo == 0 {
 		primo = 1
 	}
+	log.Print("Link agli episodi trovati!")
 
 	// get stream links
+	log.Print("Cercando i link alle stream...")
 	var epLinks = []IndexedUrl{}
 	for i := primo; i <= ultimo; i++ {
 		if indexedLink, err := GetStreamLink(client, string(episodi[i]), i); err == nil {
 			epLinks = append(epLinks, indexedLink)
 		} else {
-			return
+			log.Panicf("Errore nello scraping dei link alle stream: %s", err)
 		}
 	}
+	log.Print("Link alle stream trovati!")
 
+	// get file links
+	log.Print("Cercando i link ai file...")
 	var videoLinks = []IndexedUrl{}
 	for i := 0; i < len(epLinks); i++ {
 		if indexedLink, err := GetVideoLink(client, string(epLinks[i].u), epLinks[i].i); err == nil {
 			videoLinks = append(videoLinks, indexedLink)
 		} else {
-			return
+			log.Panicf("Errore nello scraping dei link ai file: %s", err)
 		}
 	}
+	log.Print("Link ai file trovati!")
 
+	// downloads
+	log.Print("Inizio download...")
 	numJobs := len(videoLinks)
 	jobs := make(chan IndexedUrl, numJobs)
 	results := make(chan int, numJobs)
@@ -286,6 +270,6 @@ func main() {
 	for a := 1; a <= numJobs; a++ {
 		<-results
 	}
-
+	log.Print("Download completati!")
 	log.Printf("Tempo inpiegato: %s", time.Since(startTime).String())
 }
