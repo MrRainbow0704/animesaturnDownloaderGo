@@ -19,7 +19,7 @@ import (
 	"github.com/dlclark/regexp2"
 )
 
-type IndexedUrl struct {
+type indexedUrl struct {
 	i int
 	u []byte
 }
@@ -36,7 +36,7 @@ func (p *myjar) Cookies(u *url.URL) []*http.Cookie {
 	return p.jar[u.Host]
 }
 
-func GetEpisodeLinks(c *http.Client, u string) ([][]byte, error) {
+func getEpisodeLinks(c *http.Client, u string) ([][]byte, error) {
 	linkRegexp := regexp.MustCompile("(?i)<a[^>]*class=[\"'][^>]*bottone-ep[^>]*[\"'][^>]*[^>]*>")
 	hrefRegexp := regexp2.MustCompile("(?i)(?<=href=[\"']).*?(?=[\"'])", 0)
 	zeroEpRegexp := regexp.MustCompile("(?i)[^0-9A-Za-z]*ep-0[^0-9A-Za-z]*")
@@ -67,7 +67,7 @@ func GetEpisodeLinks(c *http.Client, u string) ([][]byte, error) {
 	return append([][]byte{[]byte("EP 0 NOT FOUND")}, linksList...), nil
 }
 
-func GetStreamLink(c *http.Client, u string, i int) (IndexedUrl, error) {
+func getStreamLink(c *http.Client, u string, i int) (indexedUrl, error) {
 	linkRegexp := regexp.MustCompile("(?i)<a[^>]*href=[\"'][^>]*watch\\?[^>]*[\"'][^>]*>")
 	hrefRegexp := regexp2.MustCompile("(?i)(?<=href=[\"']).*?(?=[\"'])", 0)
 
@@ -76,12 +76,12 @@ func GetStreamLink(c *http.Client, u string, i int) (IndexedUrl, error) {
 	if err != nil || res.StatusCode != 200 {
 		log.Printf("Errore: %s", err)
 		log.Printf("Status: %s", res.Status)
-		return IndexedUrl{}, err
+		return indexedUrl{}, err
 	}
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		log.Printf("Errore: %s", err)
-		return IndexedUrl{}, err
+		return indexedUrl{}, err
 	}
 	content := strings.Replace(string(body), " ", "", -1)
 	link := linkRegexp.FindAll([]byte(content), -1)[0]
@@ -90,10 +90,10 @@ func GetStreamLink(c *http.Client, u string, i int) (IndexedUrl, error) {
 		streamLink = match.String()
 	}
 
-	return IndexedUrl{i, []byte(streamLink)}, nil
+	return indexedUrl{i, []byte(streamLink)}, nil
 }
 
-func GetVideoLink(c *http.Client, u string, i int) (IndexedUrl, error) {
+func getVideoLink(c *http.Client, u string, i int) (indexedUrl, error) {
 	sourceRegexp := regexp.MustCompile("<source[^>]*>")
 	srcRegexp := regexp2.MustCompile("(?<=src=[\"']).*?(?=[\"'])", 0)
 
@@ -102,25 +102,25 @@ func GetVideoLink(c *http.Client, u string, i int) (IndexedUrl, error) {
 	if err != nil || res.StatusCode != 200 {
 		log.Printf("Errore: %s", err)
 		log.Printf("Status: %s", res.Status)
-		return IndexedUrl{}, err
+		return indexedUrl{}, err
 	}
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		log.Printf("Errore: %s", err)
-		return IndexedUrl{}, err
+		return indexedUrl{}, err
 	}
 	content := strings.Replace(string(body), " ", "", -1)
 	link := sourceRegexp.FindAll([]byte(content), -1)[0]
 	vidLink, err := srcRegexp.FindStringMatch(string(link))
 	if err != nil {
 		log.Printf("Errore: %s", err)
-		return IndexedUrl{}, err
+		return indexedUrl{}, err
 	}
 
-	return IndexedUrl{i, []byte(vidLink.String())}, nil
+	return indexedUrl{i, []byte(vidLink.String())}, nil
 }
 
-func downloadFile(filepath string, url string) error {
+func downloadFile(c *http.Client, filepath string, url string) error {
 	// Create the file
 	out, err := os.Create(filepath)
 	if err != nil {
@@ -129,8 +129,10 @@ func downloadFile(filepath string, url string) error {
 	defer out.Close()
 
 	// Get the data
-	resp, err := http.Get(url)
-	if err != nil {
+	// resp, err := http.Get(url)
+	req, _ := http.NewRequest("GET", url, nil)
+	resp, err := c.Do(req)
+	if err != nil || resp.StatusCode != 200 {
 		return err
 	}
 	defer resp.Body.Close()
@@ -149,13 +151,13 @@ func downloadFile(filepath string, url string) error {
 	return nil
 }
 
-func Downloader(id int, c *http.Client, path string, filename string, jobs <-chan IndexedUrl, results chan<- int) {
+func downloader(id int, c *http.Client, path string, filename string, jobs <-chan indexedUrl, results chan<- int) {
 	for j := range jobs {
 		name := filepath.Join(path, filename+strconv.Itoa(j.i)+".mp4")
 		startTime := time.Now()
 		log.Printf("Inizio download di `%s`...", filename+strconv.Itoa(j.i)+".mp4")
 
-		downloadFile(name, string(j.u))
+		downloadFile(c, name, string(j.u))
 
 		log.Printf("Finito di scaricare `%s` in %ss", name, time.Since(startTime).String())
 		results <- 0 // flag that job is finished
@@ -269,7 +271,7 @@ func main() {
 	// getting episode links
 	log.Print("Cercando i link agli episodi...")
 	var episodi [][]byte
-	if e, err := GetEpisodeLinks(client, link); err == nil {
+	if e, err := getEpisodeLinks(client, link); err == nil {
 		episodi = e
 	} else {
 		log.Panicf("Errore nello scraping dei link agli episodi: %s", err)
@@ -284,9 +286,9 @@ func main() {
 
 	// get stream links
 	log.Print("Cercando i link alle stream...")
-	var epLinks = []IndexedUrl{}
+	var epLinks = []indexedUrl{}
 	for i := primo; i <= ultimo; i++ {
-		if indexedLink, err := GetStreamLink(client, string(episodi[i]), i); err == nil {
+		if indexedLink, err := getStreamLink(client, string(episodi[i]), i); err == nil {
 			epLinks = append(epLinks, indexedLink)
 		} else {
 			log.Panicf("Errore nello scraping dei link alle stream: %s", err)
@@ -296,9 +298,9 @@ func main() {
 
 	// get file links
 	log.Print("Cercando i link ai file...")
-	var videoLinks = []IndexedUrl{}
+	var videoLinks = []indexedUrl{}
 	for i := 0; i < len(epLinks); i++ {
-		if indexedLink, err := GetVideoLink(client, string(epLinks[i].u), epLinks[i].i); err == nil {
+		if indexedLink, err := getVideoLink(client, string(epLinks[i].u), epLinks[i].i); err == nil {
 			videoLinks = append(videoLinks, indexedLink)
 		} else {
 			log.Panicf("Errore nello scraping dei link ai file: %s", err)
@@ -309,10 +311,10 @@ func main() {
 	// downloads
 	log.Print("Inizio download...")
 	numJobs := len(videoLinks)
-	jobs := make(chan IndexedUrl, numJobs)
+	jobs := make(chan indexedUrl, numJobs)
 	results := make(chan int, numJobs)
 	for w := 1; w <= 3; w++ { // only 3 workers, all blocked initially
-		go Downloader(w, client, path, filename, jobs, results)
+		go downloader(w, client, path, filename, jobs, results)
 	}
 
 	// continually feed in urls to workers
