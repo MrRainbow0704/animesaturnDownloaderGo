@@ -26,7 +26,7 @@ foo@bar:~$ ./main.exe -u https://your-url-here/anime -f 1 -l 12 -d ./my-anime -n
 ```
 Entrambi i comandi hanno questo risultato: 
 Invocare l'eseguibile con i seguenti parametri:
-- url: https://your-url-here/anime
+- url: https[]()://your-url-here/anime
 - primo episodio: 1
 - ultimo episodio: 12
 - cartella output: ./my-anime
