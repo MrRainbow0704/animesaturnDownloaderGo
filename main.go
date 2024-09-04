@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -44,13 +43,13 @@ func getEpisodeLinks(c *http.Client, u string) ([][]byte, error) {
 	req, _ := http.NewRequest("GET", u, nil)
 	res, err := c.Do(req)
 	if err != nil || res.StatusCode != 200 {
-		log.Printf("Errore: %s", err)
-		log.Printf("Status: %s", res.Status)
+		fmt.Printf("Errore: %s", err)
+		fmt.Printf("Status: %s", res.Status)
 		return nil, err
 	}
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		log.Printf("Errore: %s", err)
+		fmt.Printf("Errore: %s", err)
 		return nil, err
 	}
 	content := strings.Replace(string(body), " ", "", -1)
@@ -74,13 +73,13 @@ func getStreamLink(c *http.Client, u string, i int) (indexedUrl, error) {
 	req, _ := http.NewRequest("GET", u, nil)
 	res, err := c.Do(req)
 	if err != nil || res.StatusCode != 200 {
-		log.Printf("Errore: %s", err)
-		log.Printf("Status: %s", res.Status)
+		fmt.Printf("Errore: %s", err)
+		fmt.Printf("Status: %s", res.Status)
 		return indexedUrl{}, err
 	}
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		log.Printf("Errore: %s", err)
+		fmt.Printf("Errore: %s", err)
 		return indexedUrl{}, err
 	}
 	content := strings.Replace(string(body), " ", "", -1)
@@ -100,20 +99,20 @@ func getVideoLink(c *http.Client, u string, i int) (indexedUrl, error) {
 	req, _ := http.NewRequest("GET", u, nil)
 	res, err := c.Do(req)
 	if err != nil || res.StatusCode != 200 {
-		log.Printf("Errore: %s", err)
-		log.Printf("Status: %s", res.Status)
+		fmt.Printf("Errore: %s", err)
+		fmt.Printf("Status: %s", res.Status)
 		return indexedUrl{}, err
 	}
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		log.Printf("Errore: %s", err)
+		fmt.Printf("Errore: %s", err)
 		return indexedUrl{}, err
 	}
 	content := strings.Replace(string(body), " ", "", -1)
 	link := sourceRegexp.FindAll([]byte(content), -1)[0]
 	vidLink, err := srcRegexp.FindStringMatch(string(link))
 	if err != nil {
-		log.Printf("Errore: %s", err)
+		fmt.Printf("Errore: %s", err)
 		return indexedUrl{}, err
 	}
 
@@ -151,37 +150,25 @@ func downloadFile(c *http.Client, filepath string, url string) error {
 	return nil
 }
 
-func downloader(id int, c *http.Client, path string, filename string, jobs <-chan indexedUrl, results chan<- int) {
+func downloader(c *http.Client, path string, filename string, jobs <-chan indexedUrl, results chan<- int) {
 	for j := range jobs {
 		name := filepath.Join(path, filename+strconv.Itoa(j.i)+".mp4")
 		startTime := time.Now()
-		log.Printf("Inizio download di `%s`...", filename+strconv.Itoa(j.i)+".mp4")
+		fmt.Printf("Inizio download di `%s`...", filename+strconv.Itoa(j.i)+".mp4")
 
 		downloadFile(c, name, string(j.u))
 
-		log.Printf("Finito di scaricare `%s` in %ss", name, time.Since(startTime).String())
+		fmt.Printf("Finito di scaricare `%s` in %ss", name, time.Since(startTime).String())
 		results <- 0 // flag that job is finished
 	}
 }
 
-func isFlagPassed(name string) bool {
-	found := false
+func noFlags() bool {
+	found := true
 	flag.Visit(func(f *flag.Flag) {
-		if f.Name == name {
-			found = true
-		}
+		found = false
 	})
 	return found
-}
-
-func noFlags(names ...string) bool {
-	ret := true
-	for _, name := range names {
-		if isFlagPassed(name) {
-			ret = false
-		}
-	}
-	return ret
 }
 
 func main() {
@@ -189,16 +176,15 @@ func main() {
 
 	// initialize flags arguments
 	const usage = `Flag di AnimesaturnDownloader:
-  -h, --help			prints help information
-  -u, --url, --link		link alla pagina dell'anime
-  -f, --first			primo episodio da scaricare
-  -l, --last			ultimo episodio da scaricare
-  -d, --dir, --path		percorso dove salvare i file
-  -n, --filename		nome del file, senza numero di episodio e estensione
+  -h, --help		stampa le informazioni di aiuto
+  -u, --url 		link alla pagina dell'anime 	[Obbligatorio]
+  -f, --first		primo episodio da scaricare 	[Default: 0]
+  -l, --last		ultimo episodio da scaricare 	[Default: -1]
+  -d, --dir 		percorso dove salvare i file 	[Default: percorso corrente]
+  -n, --filename	nome del file senza estensione	[Obbligatorio]
 `
 
 	var link string
-	flag.StringVar(&link, "link", "D", "link alla pagina dell'anime")
 	flag.StringVar(&link, "url", "D", "link alla pagina dell'anime")
 	flag.StringVar(&link, "u", "D", "link alla pagina dell'anime")
 	var primo int
@@ -208,17 +194,16 @@ func main() {
 	flag.IntVar(&ultimo, "last", -1, "ultimo episodio da scaricare")
 	flag.IntVar(&ultimo, "l", -1, "ultimo episodio da scaricare")
 	var path string
-	flag.StringVar(&path, "path", cwd, "percorso dove salvare i file")
 	flag.StringVar(&path, "dir", cwd, "percorso dove salvare i file")
 	flag.StringVar(&path, "d", cwd, "percorso dove salvare i file")
 	var filename string
 	flag.StringVar(&filename, "filename", "D", "nome del file, senza numero di episodio e estensione")
 	flag.StringVar(&filename, "n", "D", "nome del file, senza numero di episodio e estensione")
 
-	flag.Usage = func() { log.Print(usage) }
+	flag.Usage = func() { fmt.Print(usage) }
 	flag.Parse()
 
-	if noFlags("link", "primo", "ultimo", "path", "filename") {
+	if noFlags() {
 		// initializing reader
 		reader := bufio.NewReader(os.Stdin)
 
@@ -249,6 +234,8 @@ func main() {
 		// Getting filenames
 		fmt.Print("Inserisci il nome per i file: ")
 		filename, _ = reader.ReadString('\n')
+	} else if !noFlags() && (link == "D" || filename == "D") {
+		panic("I flag --url e --dir sono obbligatori")
 	}
 
 	// Input formatting
@@ -258,63 +245,63 @@ func main() {
 		path = filepath.Join(cwd, path)
 	}
 	if err := os.MkdirAll(path, 0777); err != nil {
-		log.Panicf("Errore durante la creazione della directory `%s`: %s", path, err)
+		panic(fmt.Sprintf("Errore durante la creazione della directory `%s`: %s", path, err))
 	}
 	filename = strings.TrimSpace(filename)
 
 	var startTime = time.Now()
 	// Setting up session
-	log.Print("Inizializzando la sessione...")
+	fmt.Println("Inizializzando la sessione...")
 	client := &http.Client{Jar: &myjar{make(map[string][]*http.Cookie)}}
-	log.Print("Sessione creata!")
+	fmt.Println("Sessione creata!")
 
 	// getting episode links
-	log.Print("Cercando i link agli episodi...")
+	fmt.Println("Cercando i link agli episodi...")
 	var episodi [][]byte
 	if e, err := getEpisodeLinks(client, link); err == nil {
 		episodi = e
 	} else {
-		log.Panicf("Errore nello scraping dei link agli episodi: %s", err)
+		panic(fmt.Sprintf("Errore nello scraping dei link agli episodi: %s", err))
 	}
-	if bytes.Equal(episodi[0], []byte("NOT FOUND")) && primo == 0 {
+	if bytes.Equal(episodi[0], []byte("EP 0 NOT FOUND")) && primo == 0 {
 		primo = 1
 	}
 	if ultimo == -1 {
 		ultimo = len(episodi) - 1
 	}
-	log.Print("Link agli episodi trovati!")
+	fmt.Println("Link agli episodi trovati!")
 
 	// get stream links
-	log.Print("Cercando i link alle stream...")
+	fmt.Println("Cercando i link alle stream...")
 	var epLinks = []indexedUrl{}
 	for i := primo; i <= ultimo; i++ {
 		if indexedLink, err := getStreamLink(client, string(episodi[i]), i); err == nil {
 			epLinks = append(epLinks, indexedLink)
 		} else {
-			log.Panicf("Errore nello scraping dei link alle stream: %s", err)
+			panic(fmt.Sprintf("Errore nello scraping dei link alle stream: %s", err))
 		}
 	}
-	log.Print("Link alle stream trovati!")
+	fmt.Println("Link alle stream trovati!")
 
 	// get file links
-	log.Print("Cercando i link ai file...")
+	fmt.Println("Cercando i link ai file...")
 	var videoLinks = []indexedUrl{}
 	for i := 0; i < len(epLinks); i++ {
 		if indexedLink, err := getVideoLink(client, string(epLinks[i].u), epLinks[i].i); err == nil {
 			videoLinks = append(videoLinks, indexedLink)
 		} else {
-			log.Panicf("Errore nello scraping dei link ai file: %s", err)
+			panic(fmt.Sprintf("Errore nello scraping dei link ai file: %s", err))
 		}
 	}
-	log.Print("Link ai file trovati!")
+	fmt.Println("Link ai file trovati!")
 
 	// downloads
-	log.Print("Inizio download...")
+	fmt.Println("Inizio download...")
 	numJobs := len(videoLinks)
 	jobs := make(chan indexedUrl, numJobs)
 	results := make(chan int, numJobs)
-	for w := 1; w <= 3; w++ { // only 3 workers, all blocked initially
-		go downloader(w, client, path, filename, jobs, results)
+	for i := 1; i <= 3; i++ { // only 3 workers, all blocked initially
+		go downloader(client, path, filename, jobs, results)
 	}
 
 	// continually feed in urls to workers
@@ -328,6 +315,6 @@ func main() {
 	for a := 1; a <= numJobs; a++ {
 		<-results
 	}
-	log.Print("Download completati!")
-	log.Printf("Tempo inpiegato: %s", time.Since(startTime).String())
+	fmt.Println("Download completati!")
+	fmt.Printf("Tempo inpiegato: %s", time.Since(startTime).String())
 }
