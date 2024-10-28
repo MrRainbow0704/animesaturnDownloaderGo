@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -95,7 +96,7 @@ func getStreamLink(c *http.Client, u string, i int) (indexedUrl, error) {
 func getVideoLink(c *http.Client, u string, i int) (indexedUrl, error) {
 	sourceRegexp := regexp.MustCompile("<source[^>]*>")
 	srcRegexp := regexp2.MustCompile("(?<=src=[\"']).*?(?=[\"'])", 0)
-
+	m3u8Regexp := regexp2.MustCompile("https:\\/\\/.*?(?=\\.m3u8)", 0)
 	req, _ := http.NewRequest("GET", u, nil)
 	res, err := c.Do(req)
 	if err != nil || res.StatusCode != 200 {
@@ -109,14 +110,25 @@ func getVideoLink(c *http.Client, u string, i int) (indexedUrl, error) {
 		return indexedUrl{}, err
 	}
 	content := strings.Replace(string(body), " ", "", -1)
-	link := sourceRegexp.FindAll([]byte(content), -1)[0]
-	vidLink, err := srcRegexp.FindStringMatch(string(link))
-	if err != nil {
-		fmt.Printf("Errore: %s", err)
-		return indexedUrl{}, err
+	links := sourceRegexp.FindAll([]byte(content), -1)
+	if links != nil {
+		// old format
+		link := string(links[0])
+		vidLink, err := srcRegexp.FindStringMatch(link)
+		if err != nil {
+			fmt.Printf("Errore: %s", err)
+			return indexedUrl{}, err
+		}
+		return indexedUrl{i, []byte(vidLink.String())}, nil
+	} else {
+		// new format (.m3u8)
+		links, err := m3u8Regexp.FindStringMatch(content)
+		if err != nil {
+			return indexedUrl{}, err
+		}
+		link := links.String() + ".m3u8"
+		return indexedUrl{i, []byte(link)}, nil
 	}
-
-	return indexedUrl{i, []byte(vidLink.String())}, nil
 }
 
 func downloadFile(c *http.Client, filepath string, url string) error {
@@ -142,8 +154,7 @@ func downloadFile(c *http.Client, filepath string, url string) error {
 	}
 
 	// Writer the body to file
-	_, err = io.Copy(out, resp.Body)
-	if err != nil {
+	if _, err = io.Copy(out, resp.Body); err != nil {
 		return err
 	}
 
@@ -156,11 +167,26 @@ func downloader(c *http.Client, path string, filename string, jobs <-chan indexe
 		startTime := time.Now()
 		fmt.Printf("Inizio download di `%s`...", filename+strconv.Itoa(j.i)+".mp4")
 
-		downloadFile(c, name, string(j.u))
+		if err := downloadFile(c, name, string(j.u)); err != nil {
+			panic(err)
+		}
 
 		fmt.Printf("Finito di scaricare `%s` in %ss", name, time.Since(startTime).String())
 		results <- 0 // flag that job is finished
 	}
+}
+
+func downloader_new(path string, filename string, u indexedUrl, finish chan<- bool) {
+	outPath := filepath.Join(path, filename+strconv.Itoa(u.i)+".mp4")
+	startTime := time.Now()
+	fmt.Printf("Inizio download di `%s`...\n", filename+strconv.Itoa(u.i)+".mp4")
+
+	if err := exec.Command("ffmpeg", "-protocol_whitelist", "file,http,https,tcp,tls,crypto", "-i", string(u.u), "-c", "copy", outPath).Run(); err != nil {
+		panic(fmt.Sprintf("FFMPEG failed with error code: %s", err))
+	}
+
+	fmt.Printf("Finito di scaricare `%s` in %ss\n", filename+strconv.Itoa(u.i)+".mp4", time.Since(startTime).String())
+	finish <- true
 }
 
 func noFlags() bool {
@@ -286,7 +312,7 @@ func main() {
 	// get file links
 	fmt.Println("Cercando i link ai file...")
 	var videoLinks = []indexedUrl{}
-	for i := 0; i < len(epLinks); i++ {
+	for i := range epLinks {
 		if indexedLink, err := getVideoLink(client, string(epLinks[i].u), epLinks[i].i); err == nil {
 			videoLinks = append(videoLinks, indexedLink)
 		} else {
@@ -294,27 +320,53 @@ func main() {
 		}
 	}
 	fmt.Println("Link ai file trovati!")
-
-	// downloads
 	fmt.Println("Inizio download...")
-	numJobs := len(videoLinks)
-	jobs := make(chan indexedUrl, numJobs)
-	results := make(chan int, numJobs)
-	for i := 1; i <= 3; i++ { // only 3 workers, all blocked initially
-		go downloader(client, path, filename, jobs, results)
-	}
-
-	// continually feed in urls to workers
+	var m3u8Files []indexedUrl
+	var mp4Files []indexedUrl
 	for _, link := range videoLinks {
-		jobs <- link
+		if strings.HasSuffix(string(link.u), ".m3u8") {
+			m3u8Files = append(m3u8Files, link)
+		} else {
+			mp4Files = append(mp4Files, link)
+		}
 	}
-	close(jobs) // no more urls, so tell workers to stop their loop
+	if len(m3u8Files) > 0 {
+		// new style downloads
+		err := exec.Command("ffmpeg", "-version").Run()
+		if err != nil {
+			panic("Per questo tipo di file è necessario FFMPEG.")
+		}
 
-	// needed if you want to make sure that workers don't block forever on writing results,
-	// remove both this loop and workers writing results if you don't need output from workers
-	for a := 1; a <= numJobs; a++ {
-		<-results
+		finish := make(chan bool, len(m3u8Files))
+		for _, u := range m3u8Files {
+			go downloader_new(path, filename, u, finish)
+		}
+		for range m3u8Files {
+			<-finish
+		}
 	}
+	if len(mp4Files) > 0 {
+		// old style downloads
+		numJobs := len(mp4Files)
+		jobs := make(chan indexedUrl, numJobs)
+		results := make(chan int, numJobs)
+		for range 3 { // only 3 workers, all blocked initially
+			go downloader(client, path, filename, jobs, results)
+		}
+
+		// continually feed in urls to workers
+		for _, link := range mp4Files {
+			jobs <- link
+		}
+		close(jobs) // no more urls, so tell workers to stop their loop
+
+		// needed if you want to make sure that workers don't block forever on writing results,
+		// remove both this loop and workers writing results if you don't need output from workers
+		for range numJobs {
+			<-results
+		}
+	}
+
 	fmt.Println("Download completati!")
 	fmt.Printf("Tempo inpiegato: %s", time.Since(startTime).String())
 }
