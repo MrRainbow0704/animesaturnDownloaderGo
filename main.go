@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/dlclark/regexp2"
+	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
 
 type indexedUrl struct {
@@ -161,7 +162,7 @@ func downloadFile(c *http.Client, filepath string, url string) error {
 	return nil
 }
 
-func downloader(c *http.Client, path string, filename string, jobs <-chan indexedUrl, results chan<- int) {
+func downloader(c *http.Client, path string, filename string, jobs <-chan indexedUrl, finish chan<- bool) {
 	for j := range jobs {
 		name := filepath.Join(path, filename+strconv.Itoa(j.i)+".mp4")
 		startTime := time.Now()
@@ -172,21 +173,26 @@ func downloader(c *http.Client, path string, filename string, jobs <-chan indexe
 		}
 
 		fmt.Printf("Finito di scaricare `%s` in %ss", name, time.Since(startTime).String())
-		results <- 0 // flag that job is finished
+		finish <- true // flag that job is finished
 	}
 }
 
-func downloader_new(path string, filename string, u indexedUrl, finish chan<- bool) {
-	outPath := filepath.Join(path, filename+strconv.Itoa(u.i)+".mp4")
-	startTime := time.Now()
-	fmt.Printf("Inizio download di `%s`...\n", filename+strconv.Itoa(u.i)+".mp4")
+func downloader_new(path string, filename string, jobs <-chan indexedUrl, finish chan<- bool) {
+	for j := range jobs {
+		outPath := filepath.Join(path, filename+strconv.Itoa(j.i)+".mp4")
+		startTime := time.Now()
+		fmt.Printf("Inizio download di `%s`...\n", filename+strconv.Itoa(j.i)+".mp4")
 
-	if err := exec.Command("ffmpeg", "-protocol_whitelist", "file,http,https,tcp,tls,crypto", "-i", string(u.u), "-c", "copy", outPath).Run(); err != nil {
-		panic(fmt.Sprintf("FFMPEG failed with error code: %s", err))
+		if err := ffmpeg.Input(string(j.u)).Output(
+			outPath,
+			ffmpeg.KwArgs{"protocol_whitelist": "file,http,https,tcp,tls,crypto", "c": "copy"},
+		).Run(); err != nil {
+			panic(fmt.Sprintf("FFMPEG failed with error code: %s", err))
+		}
+
+		fmt.Printf("Finito di scaricare `%s` in %ss\n", filename+strconv.Itoa(j.i)+".mp4", time.Since(startTime).String())
+		finish <- true
 	}
-
-	fmt.Printf("Finito di scaricare `%s` in %ss\n", filename+strconv.Itoa(u.i)+".mp4", time.Since(startTime).String())
-	finish <- true
 }
 
 func noFlags() bool {
@@ -337,21 +343,27 @@ func main() {
 			panic("Per questo tipo di file è necessario FFMPEG.")
 		}
 
+		jobs := make(chan indexedUrl, len(m3u8Files))
 		finish := make(chan bool, len(m3u8Files))
-		for _, u := range m3u8Files {
-			go downloader_new(path, filename, u, finish)
+		for range 3 {
+			go downloader_new(path, filename, jobs, finish)
 		}
+
+		for _, link := range m3u8Files {
+			jobs <- link
+		}
+		close(jobs) // no more urls, so tell workers to stop their loop
+
 		for range m3u8Files {
 			<-finish
 		}
 	}
 	if len(mp4Files) > 0 {
 		// old style downloads
-		numJobs := len(mp4Files)
-		jobs := make(chan indexedUrl, numJobs)
-		results := make(chan int, numJobs)
+		jobs := make(chan indexedUrl, len(mp4Files))
+		finish := make(chan bool, len(mp4Files))
 		for range 3 { // only 3 workers, all blocked initially
-			go downloader(client, path, filename, jobs, results)
+			go downloader(client, path, filename, jobs, finish)
 		}
 
 		// continually feed in urls to workers
@@ -362,8 +374,8 @@ func main() {
 
 		// needed if you want to make sure that workers don't block forever on writing results,
 		// remove both this loop and workers writing results if you don't need output from workers
-		for range numJobs {
-			<-results
+		for range mp4Files {
+			<-finish
 		}
 	}
 
