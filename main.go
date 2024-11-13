@@ -45,13 +45,13 @@ func getEpisodeLinks(c *http.Client, u string) ([][]byte, error) {
 	req, _ := http.NewRequest("GET", u, nil)
 	res, err := c.Do(req)
 	if err != nil || res.StatusCode != 200 {
-		fmt.Printf("Errore: %s", err)
-		fmt.Printf("Status: %s", res.Status)
+		fmt.Printf("Errore: %s\n", err)
+		fmt.Printf("Status: %s\n", res.Status)
 		return nil, err
 	}
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		fmt.Printf("Errore: %s", err)
+		fmt.Printf("Errore: %s\n", err)
 		return nil, err
 	}
 	content := strings.Replace(string(body), " ", "", -1)
@@ -75,13 +75,13 @@ func getStreamLink(c *http.Client, u string, i int) (indexedUrl, error) {
 	req, _ := http.NewRequest("GET", u, nil)
 	res, err := c.Do(req)
 	if err != nil || res.StatusCode != 200 {
-		fmt.Printf("Errore: %s", err)
-		fmt.Printf("Status: %s", res.Status)
+		fmt.Printf("Errore: %s\n", err)
+		fmt.Printf("Status: %s\n", res.Status)
 		return indexedUrl{}, err
 	}
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		fmt.Printf("Errore: %s", err)
+		fmt.Printf("Errore: %s\n", err)
 		return indexedUrl{}, err
 	}
 	content := strings.Replace(string(body), " ", "", -1)
@@ -101,13 +101,13 @@ func getVideoLink(c *http.Client, u string, i int) (indexedUrl, error) {
 	req, _ := http.NewRequest("GET", u, nil)
 	res, err := c.Do(req)
 	if err != nil || res.StatusCode != 200 {
-		fmt.Printf("Errore: %s", err)
-		fmt.Printf("Status: %s", res.Status)
+		fmt.Printf("Errore: %s\n", err)
+		fmt.Printf("Status: %s\n", res.Status)
 		return indexedUrl{}, err
 	}
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		fmt.Printf("Errore: %s", err)
+		fmt.Printf("Errore: %s\n", err)
 		return indexedUrl{}, err
 	}
 	content := strings.Replace(string(body), " ", "", -1)
@@ -117,7 +117,7 @@ func getVideoLink(c *http.Client, u string, i int) (indexedUrl, error) {
 		link := string(links[0])
 		vidLink, err := srcRegexp.FindStringMatch(link)
 		if err != nil {
-			fmt.Printf("Errore: %s", err)
+			fmt.Printf("Errore: %s\n", err)
 			return indexedUrl{}, err
 		}
 		return indexedUrl{i, []byte(vidLink.String())}, nil
@@ -166,13 +166,13 @@ func downloader(c *http.Client, path string, filename string, jobs <-chan indexe
 	for j := range jobs {
 		name := filepath.Join(path, filename+strconv.Itoa(j.i)+".mp4")
 		startTime := time.Now()
-		fmt.Printf("Inizio download di `%s`...", filename+strconv.Itoa(j.i)+".mp4")
+		fmt.Printf("Inizio download di `%s`...\n", filename+strconv.Itoa(j.i)+".mp4")
 
 		if err := downloadFile(c, name, string(j.u)); err != nil {
 			panic(err)
 		}
 
-		fmt.Printf("Finito di scaricare `%s` in %ss", name, time.Since(startTime).String())
+		fmt.Printf("Finito di scaricare `%s` in %ss\n", name, time.Since(startTime).String())
 		finish <- true // flag that job is finished
 	}
 }
@@ -293,7 +293,7 @@ func main() {
 	if e, err := getEpisodeLinks(client, link); err == nil {
 		episodi = e
 	} else {
-		panic(fmt.Sprintf("Errore nello scraping dei link agli episodi: %s", err))
+		panic(fmt.Sprintf("Errore nello scraping dei link agli episodi: %s\n", err))
 	}
 	if bytes.Equal(episodi[0], []byte("EP 0 NOT FOUND")) && primo == 0 {
 		primo = 1
@@ -380,5 +380,5 @@ func main() {
 	}
 
 	fmt.Println("Download completati!")
-	fmt.Printf("Tempo inpiegato: %s", time.Since(startTime).String())
+	fmt.Printf("Tempo inpiegato: %s\n", time.Since(startTime).String())
 }
