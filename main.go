@@ -172,7 +172,7 @@ func downloader_mp4(c *http.Client, path string, filename string, jobs <-chan in
 			panic(err)
 		}
 
-		fmt.Printf("Finito di scaricare `%s` in %ss\n", name, time.Since(startTime).String())
+		fmt.Printf("Finito di scaricare `%s` in %s\n", name, time.Since(startTime).String())
 		finish <- true // flag that job is finished
 	}
 }
@@ -190,7 +190,7 @@ func downloader_m3u8(path string, filename string, jobs <-chan indexedUrl, finis
 			panic(fmt.Sprintf("FFMPEG failed with error code: %s", err))
 		}
 
-		fmt.Printf("Finito di scaricare `%s` in %ss\n", filename+strconv.Itoa(j.i)+".mp4", time.Since(startTime).String())
+		fmt.Printf("Finito di scaricare `%s` in %s\n", filename+strconv.Itoa(j.i)+".mp4", time.Since(startTime).String())
 		finish <- true
 	}
 }
