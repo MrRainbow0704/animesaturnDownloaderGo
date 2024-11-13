@@ -162,7 +162,7 @@ func downloadFile(c *http.Client, filepath string, url string) error {
 	return nil
 }
 
-func downloader(c *http.Client, path string, filename string, jobs <-chan indexedUrl, finish chan<- bool) {
+func downloader_mp4(c *http.Client, path string, filename string, jobs <-chan indexedUrl, finish chan<- bool) {
 	for j := range jobs {
 		name := filepath.Join(path, filename+strconv.Itoa(j.i)+".mp4")
 		startTime := time.Now()
@@ -177,7 +177,7 @@ func downloader(c *http.Client, path string, filename string, jobs <-chan indexe
 	}
 }
 
-func downloader_new(path string, filename string, jobs <-chan indexedUrl, finish chan<- bool) {
+func downloader_m3u8(path string, filename string, jobs <-chan indexedUrl, finish chan<- bool) {
 	for j := range jobs {
 		outPath := filepath.Join(path, filename+strconv.Itoa(j.i)+".mp4")
 		startTime := time.Now()
@@ -332,12 +332,13 @@ func main() {
 	for _, link := range videoLinks {
 		if strings.HasSuffix(string(link.u), ".m3u8") {
 			m3u8Files = append(m3u8Files, link)
-		} else {
-			mp4Files = append(mp4Files, link)
+			} else {
+				mp4Files = append(mp4Files, link)
+			}
 		}
-	}
 	if len(m3u8Files) > 0 {
 		// new style downloads
+		fmt.Println("Rilevati file m3u8! Inizializando il download tramite FFMPEG...")
 		err := exec.Command("ffmpeg", "-version").Run()
 		if err != nil {
 			panic("Per questo tipo di file è necessario FFMPEG.")
@@ -346,7 +347,7 @@ func main() {
 		jobs := make(chan indexedUrl, len(m3u8Files))
 		finish := make(chan bool, len(m3u8Files))
 		for range 3 {
-			go downloader_new(path, filename, jobs, finish)
+			go downloader_m3u8(path, filename, jobs, finish)
 		}
 
 		for _, link := range m3u8Files {
@@ -362,8 +363,8 @@ func main() {
 		// old style downloads
 		jobs := make(chan indexedUrl, len(mp4Files))
 		finish := make(chan bool, len(mp4Files))
-		for range 3 { // only 3 workers, all blocked initially
-			go downloader(client, path, filename, jobs, finish)
+		for range 3 {
+			go downloader_mp4(client, path, filename, jobs, finish)
 		}
 
 		// continually feed in urls to workers
