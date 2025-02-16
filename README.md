@@ -41,3 +41,7 @@ Invocare l'eseguibile con i seguenti parametri:
 -   nome dei file: MyAnime\_
 
 NB: Il prgoramma aggiunge "i.mp4" alla fine di ogni file con i uguale al numero dell'episodio scaricato.
+
+## ToDo
+
+Aggiornare la utility per gestire le nuove pagine utilizzanti react magari utilizzando https://github.com/chromedp/chromedp
