@@ -5,19 +5,15 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
-
-	"github.com/dlclark/regexp2"
-	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
 
 type indexedUrl struct {
@@ -25,174 +21,16 @@ type indexedUrl struct {
 	u []byte
 }
 
-type myjar struct {
+type cookieJar struct {
 	jar map[string][]*http.Cookie
 }
 
-func (p *myjar) SetCookies(u *url.URL, cookies []*http.Cookie) {
+func (p *cookieJar) SetCookies(u *url.URL, cookies []*http.Cookie) {
 	p.jar[u.Host] = cookies
 }
 
-func (p *myjar) Cookies(u *url.URL) []*http.Cookie {
+func (p *cookieJar) Cookies(u *url.URL) []*http.Cookie {
 	return p.jar[u.Host]
-}
-
-func getEpisodeLinks(c *http.Client, u string) ([][]byte, error) {
-	linkRegexp := regexp.MustCompile("(?i)<a[^>]*class=[\"'][^>]*bottone-ep[^>]*[\"'][^>]*[^>]*>")
-	hrefRegexp := regexp2.MustCompile("(?i)(?<=href=[\"']).*?(?=[\"'])", 0)
-	zeroEpRegexp := regexp.MustCompile("(?i)[^0-9A-Za-z]*ep-0[^0-9A-Za-z]*")
-
-	req, _ := http.NewRequest("GET", u, nil)
-	res, err := c.Do(req)
-	if err != nil || res.StatusCode != 200 {
-		fmt.Printf("Errore: %s\n", err)
-		fmt.Printf("Status: %s\n", res.Status)
-		return nil, err
-	}
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		fmt.Printf("Errore: %s\n", err)
-		return nil, err
-	}
-	content := strings.Replace(string(body), " ", "", -1)
-	links := linkRegexp.FindAll([]byte(content), -1)
-	linksList := [][]byte{}
-	for i := 0; i < len(links); i++ {
-		if match, err := hrefRegexp.FindStringMatch(string(links[i])); err == nil {
-			linksList = append(linksList, []byte(match.String()))
-		}
-	}
-	if zeroEpRegexp.FindAll(linksList[0], -1) != nil {
-		return linksList, nil
-	}
-	return append([][]byte{[]byte("EP 0 NOT FOUND")}, linksList...), nil
-}
-
-func getStreamLink(c *http.Client, u string, i int) (indexedUrl, error) {
-	linkRegexp := regexp.MustCompile("(?i)<a[^>]*href=[\"'][^>]*watch\\?[^>]*[\"'][^>]*>")
-	hrefRegexp := regexp2.MustCompile("(?i)(?<=href=[\"']).*?(?=[\"'])", 0)
-
-	req, _ := http.NewRequest("GET", u, nil)
-	res, err := c.Do(req)
-	if err != nil || res.StatusCode != 200 {
-		fmt.Printf("Errore: %s\n", err)
-		fmt.Printf("Status: %s\n", res.Status)
-		return indexedUrl{}, err
-	}
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		fmt.Printf("Errore: %s\n", err)
-		return indexedUrl{}, err
-	}
-	content := strings.Replace(string(body), " ", "", -1)
-	link := linkRegexp.FindAll([]byte(content), -1)[0]
-	var streamLink string
-	if match, err := hrefRegexp.FindStringMatch(string(link)); err == nil {
-		streamLink = match.String()
-	}
-
-	return indexedUrl{i, []byte(streamLink)}, nil
-}
-
-func getVideoLink(c *http.Client, u string, i int) (indexedUrl, error) {
-	sourceRegexp := regexp.MustCompile("<source[^>]*>")
-	srcRegexp := regexp2.MustCompile("(?<=src=[\"']).*?(?=[\"'])", 0)
-	m3u8Regexp := regexp2.MustCompile("https:\\/\\/.*?(?=\\.m3u8)", 0)
-	req, _ := http.NewRequest("GET", u, nil)
-	res, err := c.Do(req)
-	if err != nil || res.StatusCode != 200 {
-		fmt.Printf("Errore: %s\n", err)
-		fmt.Printf("Status: %s\n", res.Status)
-		return indexedUrl{}, err
-	}
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		fmt.Printf("Errore: %s\n", err)
-		return indexedUrl{}, err
-	}
-	content := strings.Replace(string(body), " ", "", -1)
-	links := sourceRegexp.FindAll([]byte(content), -1)
-	if links != nil {
-		// old format
-		link := string(links[0])
-		vidLink, err := srcRegexp.FindStringMatch(link)
-		if err != nil {
-			fmt.Printf("Errore: %s\n", err)
-			return indexedUrl{}, err
-		}
-		return indexedUrl{i, []byte(vidLink.String())}, nil
-	} else {
-		// new format (.m3u8)
-		links, err := m3u8Regexp.FindStringMatch(content)
-		if err != nil {
-			return indexedUrl{}, err
-		}
-		link := links.String() + ".m3u8"
-		return indexedUrl{i, []byte(link)}, nil
-	}
-}
-
-func downloadFile(c *http.Client, filepath string, url string) error {
-	// Create the file
-	out, err := os.Create(filepath)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	// Get the data
-	// resp, err := http.Get(url)
-	req, _ := http.NewRequest("GET", url, nil)
-	resp, err := c.Do(req)
-	if err != nil || resp.StatusCode != 200 {
-		return err
-	}
-	defer resp.Body.Close()
-
-	// Check server response
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("bad status: %s", resp.Status)
-	}
-
-	// Writer the body to file
-	if _, err = io.Copy(out, resp.Body); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func downloader_mp4(c *http.Client, path string, filename string, jobs <-chan indexedUrl, finish chan<- bool) {
-	for j := range jobs {
-		name := filepath.Join(path, filename+strconv.Itoa(j.i)+".mp4")
-		startTime := time.Now()
-		fmt.Printf("Inizio download di `%s`...\n", filename+strconv.Itoa(j.i)+".mp4")
-
-		if err := downloadFile(c, name, string(j.u)); err != nil {
-			panic(err)
-		}
-
-		fmt.Printf("Finito di scaricare `%s` in %s\n", name, time.Since(startTime).String())
-		finish <- true // flag that job is finished
-	}
-}
-
-func downloader_m3u8(path string, filename string, jobs <-chan indexedUrl, finish chan<- bool) {
-	for j := range jobs {
-		outPath := filepath.Join(path, filename+strconv.Itoa(j.i)+".mp4")
-		startTime := time.Now()
-		fmt.Printf("Inizio download di `%s`...\n", filename+strconv.Itoa(j.i)+".mp4")
-
-		if err := ffmpeg.Input(string(j.u)).Output(
-			outPath,
-			ffmpeg.KwArgs{"protocol_whitelist": "file,http,https,tcp,tls,crypto", "c": "copy"},
-		).Run(); err != nil {
-			panic(fmt.Sprintf("FFMPEG failed with error code: %s", err))
-		}
-
-		fmt.Printf("Finito di scaricare `%s` in %s\n", filename+strconv.Itoa(j.i)+".mp4", time.Since(startTime).String())
-		finish <- true
-	}
 }
 
 func noFlags() bool {
@@ -284,7 +122,7 @@ func main() {
 	var startTime = time.Now()
 	// Setting up session
 	fmt.Println("Inizializzando la sessione...")
-	client := &http.Client{Jar: &myjar{make(map[string][]*http.Cookie)}}
+	client := &http.Client{Jar: &cookieJar{make(map[string][]*http.Cookie)}}
 	fmt.Println("Sessione creata!")
 
 	// getting episode links
@@ -295,7 +133,7 @@ func main() {
 	} else {
 		panic(fmt.Sprintf("Errore nello scraping dei link agli episodi: %s\n", err))
 	}
-	if bytes.Equal(episodi[0], []byte("EP 0 NOT FOUND")) && primo == 0 {
+	if bytes.Equal(episodi[0], []byte("NO EP 0")) && primo == 0 {
 		primo = 1
 	}
 	if ultimo == -1 {
@@ -332,10 +170,10 @@ func main() {
 	for _, link := range videoLinks {
 		if strings.HasSuffix(string(link.u), ".m3u8") {
 			m3u8Files = append(m3u8Files, link)
-			} else {
-				mp4Files = append(mp4Files, link)
-			}
+		} else {
+			mp4Files = append(mp4Files, link)
 		}
+	}
 	if len(m3u8Files) > 0 {
 		// new style downloads
 		fmt.Println("Rilevati file m3u8! Inizializando il download tramite FFMPEG...")
@@ -345,26 +183,31 @@ func main() {
 		}
 
 		jobs := make(chan indexedUrl, len(m3u8Files))
-		finish := make(chan bool, len(m3u8Files))
+		wg := sync.WaitGroup{}
+		wg.Add(len(m3u8Files))
 		for range 3 {
-			go downloader_m3u8(path, filename, jobs, finish)
+			go func() {
+				defer wg.Done()
+				downloader_m3u8(path, filename, jobs)
+			}()
 		}
 
 		for _, link := range m3u8Files {
 			jobs <- link
 		}
 		close(jobs) // no more urls, so tell workers to stop their loop
-
-		for range m3u8Files {
-			<-finish
-		}
+		wg.Wait()
 	}
 	if len(mp4Files) > 0 {
 		// old style downloads
 		jobs := make(chan indexedUrl, len(mp4Files))
-		finish := make(chan bool, len(mp4Files))
+		wg := sync.WaitGroup{}
+		wg.Add(len(mp4Files))
 		for range 3 {
-			go downloader_mp4(client, path, filename, jobs, finish)
+			go func() {
+				defer wg.Done()
+				downloader_mp4(client, path, filename, jobs)
+			}()
 		}
 
 		// continually feed in urls to workers
@@ -372,12 +215,7 @@ func main() {
 			jobs <- link
 		}
 		close(jobs) // no more urls, so tell workers to stop their loop
-
-		// needed if you want to make sure that workers don't block forever on writing results,
-		// remove both this loop and workers writing results if you don't need output from workers
-		for range mp4Files {
-			<-finish
-		}
+		wg.Wait()
 	}
 
 	fmt.Println("Download completati!")
