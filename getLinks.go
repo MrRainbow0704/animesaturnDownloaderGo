@@ -68,8 +68,7 @@ func getStreamLink(c *http.Client, u string, i int) (indexedUrl, error) {
 }
 
 func getVideoLink(c *http.Client, u string, i int) (indexedUrl, error) {
-	sourceRegexp := regexp.MustCompile("<source[^>]*>")
-	srcRegexp := regexp2.MustCompile("(?<=src=[\"']).*?(?=[\"'])", 0)
+	mp4Regexp := regexp2.MustCompile("https:\\/\\/.*?(?=\\.mp4)", 0)
 	m3u8Regexp := regexp2.MustCompile("https:\\/\\/.*?(?=\\.m3u8)", 0)
 	req, _ := http.NewRequest("GET", u, nil)
 	res, err := c.Do(req)
@@ -84,23 +83,18 @@ func getVideoLink(c *http.Client, u string, i int) (indexedUrl, error) {
 		return indexedUrl{}, err
 	}
 	content := strings.Replace(string(body), " ", "", -1)
-	links := sourceRegexp.FindAll([]byte(content), -1)
-	if links != nil {
-		// old format
-		link := string(links[0])
-		vidLink, err := srcRegexp.FindStringMatch(link)
+	mp4link, err := mp4Regexp.FindStringMatch(content)
+	if err != nil {
+		fmt.Printf("Errore: %s\n", err)
+		return indexedUrl{}, err
+	}
+	if mp4link.Length == 0 {
+		m3u8link, err := m3u8Regexp.FindStringMatch(content)
 		if err != nil {
 			fmt.Printf("Errore: %s\n", err)
 			return indexedUrl{}, err
 		}
-		return indexedUrl{i, []byte(vidLink.String())}, nil
-	} else {
-		// new format (.m3u8)
-		links, err := m3u8Regexp.FindStringMatch(content)
-		if err != nil {
-			return indexedUrl{}, err
-		}
-		link := links.String() + ".m3u8"
-		return indexedUrl{i, []byte(link)}, nil
+		return indexedUrl{i, []byte(m3u8link.String() + ".m3u8")}, nil
 	}
+	return indexedUrl{i, []byte(mp4link.String() + ".mp4")}, nil
 }
