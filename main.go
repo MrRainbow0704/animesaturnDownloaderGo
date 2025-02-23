@@ -47,16 +47,20 @@ func main() {
 	// initialize flags arguments
 	const usage = `Flag di AnimesaturnDownloader:
   -h, --help		stampa le informazioni di aiuto
-  -u, --url 		link alla pagina dell'anime 	[Obbligatorio]
-  -f, --first		primo episodio da scaricare 	[Default: 0]
-  -l, --last		ultimo episodio da scaricare 	[Default: -1]
-  -d, --dir 		percorso dove salvare i file 	[Default: percorso corrente]
-  -n, --filename	nome del file senza estensione	[Obbligatorio]
+  -w, --worker		quanti worker da utilizzare		[Default: 3]
+  -n, --filename	nome del file senza estensione		[Obbligatorio]
+  -u, --url		link alla pagina dell'anime		[Obbligatorio]
+  -f, --first		primo episodio da scaricare		[Default: 0]
+  -l, --last		ultimo episodio da scaricare		[Default: -1]
+  -d, --dir		percorso dove salvare i file		[Default: percorso corrente]
 `
 
 	var link string
 	flag.StringVar(&link, "url", "D", "link alla pagina dell'anime")
 	flag.StringVar(&link, "u", "D", "link alla pagina dell'anime")
+	var workers int
+	flag.IntVar(&workers, "workers", 3, "quanti worker da utilizzare")
+	flag.IntVar(&workers, "w", 3, "quanti worker da utilizzare")
 	var primo int
 	flag.IntVar(&primo, "first", 0, "primo episodio da scaricare")
 	flag.IntVar(&primo, "f", 0, "primo episodio da scaricare")
@@ -80,6 +84,15 @@ func main() {
 		// Getting the page link
 		fmt.Print("Inserisci il link alla pagina dell'anime: ")
 		link, _ = reader.ReadString('\n')
+
+		// Getting the amount of workers to use
+		fmt.Print("Inserisci il numero di workers da usare: ")
+		workersStr, _ := reader.ReadString('\n')
+		if i, err := strconv.Atoi(workersStr); err == nil {
+			workers = i
+		} else {
+			workers = 0
+		}
 
 		// Getting the first and last episodes to download
 		fmt.Print("Inserisci il primo episodio da scaricare: ")
@@ -119,7 +132,21 @@ func main() {
 	}
 	filename = strings.TrimSpace(filename)
 
+	fmt.Printf("Scaricando da `%s`\n"+
+		"da episodio %d a %d\n"+
+		"in `%s`\n"+
+		"con nome `%s{%d-%d}.mp4`\n"+
+		"usando %d workers.\n",
+		link, primo, ultimo, path, filename, primo, ultimo, workers,
+	)
+
 	var startTime = time.Now()
+	run(link, primo, ultimo, path, filename, workers)
+	fmt.Println("Download completati!")
+	fmt.Printf("Tempo inpiegato: %s\n", time.Since(startTime).String())
+}
+
+func run(link string, primo int, ultimo int, path string, filename string, workers int) {
 	// Setting up session
 	fmt.Println("Inizializzando la sessione...")
 	client := &http.Client{Jar: &cookieJar{make(map[string][]*http.Cookie)}}
@@ -185,7 +212,7 @@ func main() {
 		jobs := make(chan indexedUrl, len(m3u8Files))
 		wg := sync.WaitGroup{}
 		wg.Add(len(m3u8Files))
-		for range 3 {
+		for range workers {
 			go func() {
 				defer wg.Done()
 				downloader_m3u8(path, filename, jobs)
@@ -203,7 +230,7 @@ func main() {
 		jobs := make(chan indexedUrl, len(mp4Files))
 		wg := sync.WaitGroup{}
 		wg.Add(len(mp4Files))
-		for range 3 {
+		for range workers {
 			go func() {
 				defer wg.Done()
 				downloader_mp4(client, path, filename, jobs)
@@ -217,7 +244,4 @@ func main() {
 		close(jobs) // no more urls, so tell workers to stop their loop
 		wg.Wait()
 	}
-
-	fmt.Println("Download completati!")
-	fmt.Printf("Tempo inpiegato: %s\n", time.Since(startTime).String())
 }
