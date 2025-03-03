@@ -14,12 +14,9 @@ import (
 	"strings"
 	"sync"
 	"time"
-)
 
-type indexedUrl struct {
-	i int
-	u []byte
-}
+	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/helper"
+)
 
 type cookieJar struct {
 	jar map[string][]*http.Cookie
@@ -155,7 +152,7 @@ func run(link string, primo int, ultimo int, path string, filename string, worke
 	// getting episode links
 	fmt.Println("Cercando i link agli episodi...")
 	var episodi [][]byte
-	if e, err := getEpisodeLinks(client, link); err == nil {
+	if e, err := helper.GetEpisodeLinks(client, link); err == nil {
 		episodi = e
 	} else {
 		panic(fmt.Sprintf("Errore nello scraping dei link agli episodi: %s\n", err))
@@ -170,9 +167,9 @@ func run(link string, primo int, ultimo int, path string, filename string, worke
 
 	// get stream links
 	fmt.Println("Cercando i link alle stream...")
-	var epLinks = []indexedUrl{}
+	var epLinks = []helper.IndexedUrl{}
 	for i := primo; i <= ultimo; i++ {
-		if indexedLink, err := getStreamLink(client, string(episodi[i]), i); err == nil {
+		if indexedLink, err := helper.GetStreamLink(client, string(episodi[i]), i); err == nil {
 			epLinks = append(epLinks, indexedLink)
 		} else {
 			panic(fmt.Sprintf("Errore nello scraping dei link alle stream: %s", err))
@@ -182,9 +179,9 @@ func run(link string, primo int, ultimo int, path string, filename string, worke
 
 	// get file links
 	fmt.Println("Cercando i link ai file...")
-	var videoLinks = []indexedUrl{}
+	var videoLinks = []helper.IndexedUrl{}
 	for i := range epLinks {
-		if indexedLink, err := getVideoLink(client, string(epLinks[i].u), epLinks[i].i); err == nil {
+		if indexedLink, err := helper.GetVideoLink(client, string(epLinks[i].Url), epLinks[i].Index); err == nil {
 			videoLinks = append(videoLinks, indexedLink)
 		} else {
 			panic(fmt.Sprintf("Errore nello scraping dei link ai file: %s", err))
@@ -192,10 +189,10 @@ func run(link string, primo int, ultimo int, path string, filename string, worke
 	}
 	fmt.Println("Link ai file trovati!")
 	fmt.Println("Inizio download...")
-	var m3u8Files []indexedUrl
-	var mp4Files []indexedUrl
+	var m3u8Files []helper.IndexedUrl
+	var mp4Files []helper.IndexedUrl
 	for _, link := range videoLinks {
-		if strings.HasSuffix(string(link.u), ".m3u8") {
+		if strings.HasSuffix(string(link.Url), ".m3u8") {
 			m3u8Files = append(m3u8Files, link)
 		} else {
 			mp4Files = append(mp4Files, link)
@@ -209,13 +206,13 @@ func run(link string, primo int, ultimo int, path string, filename string, worke
 			panic("Per questo tipo di file è necessario FFMPEG.")
 		}
 
-		jobs := make(chan indexedUrl, len(m3u8Files))
+		jobs := make(chan helper.IndexedUrl, len(m3u8Files))
 		wg := sync.WaitGroup{}
 		wg.Add(len(m3u8Files))
 		for range workers {
 			go func() {
 				defer wg.Done()
-				downloader_m3u8(path, filename, jobs)
+				helper.Downloader_m3u8(path, filename, jobs)
 			}()
 		}
 
@@ -227,13 +224,13 @@ func run(link string, primo int, ultimo int, path string, filename string, worke
 	}
 	if len(mp4Files) > 0 {
 		// old style downloads
-		jobs := make(chan indexedUrl, len(mp4Files))
+		jobs := make(chan helper.IndexedUrl, len(mp4Files))
 		wg := sync.WaitGroup{}
 		wg.Add(len(mp4Files))
 		for range workers {
 			go func() {
 				defer wg.Done()
-				downloader_mp4(client, path, filename, jobs)
+				helper.Downloader_mp4(client, path, filename, jobs)
 			}()
 		}
 

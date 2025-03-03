@@ -1,4 +1,4 @@
-package main
+package helper
 
 import (
 	"fmt"
@@ -12,7 +12,7 @@ import (
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
 
-func downloadFile(c *http.Client, filepath string, url string) error {
+func DownloadFile(c *http.Client, filepath string, url string) error {
 	// Create the file
 	out, err := os.Create(filepath)
 	if err != nil {
@@ -42,13 +42,13 @@ func downloadFile(c *http.Client, filepath string, url string) error {
 	return nil
 }
 
-func downloader_mp4(c *http.Client, path string, filename string, jobs <-chan indexedUrl) {
+func Downloader_mp4(c *http.Client, path string, filename string, jobs <-chan IndexedUrl) {
 	for j := range jobs {
-		name := filepath.Join(path, filename+strconv.Itoa(j.i)+".mp4")
+		name := filepath.Join(path, filename+strconv.Itoa(j.Index)+".mp4")
 		startTime := time.Now()
-		fmt.Printf("Inizio download di `%s`...\n", filename+strconv.Itoa(j.i)+".mp4")
+		fmt.Printf("Inizio download di `%s`...\n", filename+strconv.Itoa(j.Index)+".mp4")
 
-		if err := downloadFile(c, name, string(j.u)); err != nil {
+		if err := DownloadFile(c, name, string(j.Url)); err != nil {
 			panic(err)
 		}
 
@@ -56,19 +56,19 @@ func downloader_mp4(c *http.Client, path string, filename string, jobs <-chan in
 	}
 }
 
-func downloader_m3u8(path string, filename string, jobs <-chan indexedUrl) {
+func Downloader_m3u8(path string, filename string, jobs <-chan IndexedUrl) {
 	for j := range jobs {
-		outPath := filepath.Join(path, filename+strconv.Itoa(j.i)+".mp4")
+		outPath := filepath.Join(path, filename+strconv.Itoa(j.Index)+".mp4")
 		startTime := time.Now()
-		fmt.Printf("Inizio download di `%s`...\n", filename+strconv.Itoa(j.i)+".mp4")
+		fmt.Printf("Inizio download di `%s`...\n", filename+strconv.Itoa(j.Index)+".mp4")
 
-		if err := ffmpeg.Input(string(j.u)).Output(
+		if err := ffmpeg.Input(string(j.Url)).Output(
 			outPath,
 			ffmpeg.KwArgs{"protocol_whitelist": "file,http,https,tcp,tls,crypto", "c": "copy"},
 		).Run(); err != nil {
 			panic(fmt.Sprintf("FFMPEG failed with error code: %s", err))
 		}
 
-		fmt.Printf("Finito di scaricare `%s` in %s\n", filename+strconv.Itoa(j.i)+".mp4", time.Since(startTime).String())
+		fmt.Printf("Finito di scaricare `%s` in %s\n", filename+strconv.Itoa(j.Index)+".mp4", time.Since(startTime).String())
 	}
 }
