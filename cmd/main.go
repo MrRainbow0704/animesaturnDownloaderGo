@@ -208,12 +208,12 @@ func run(link string, primo int, ultimo int, path string, filename string, worke
 
 		jobs := make(chan helper.IndexedUrl, len(m3u8Files))
 		wg := sync.WaitGroup{}
-		wg.Add(len(m3u8Files))
 		for range workers {
-			go func() {
+			wg.Add(1)
+			go func(wg *sync.WaitGroup) {
 				defer wg.Done()
 				helper.Downloader_m3u8(path, filename, jobs)
-			}()
+			}(&wg)
 		}
 
 		for _, link := range m3u8Files {
@@ -226,12 +226,12 @@ func run(link string, primo int, ultimo int, path string, filename string, worke
 		// old style downloads
 		jobs := make(chan helper.IndexedUrl, len(mp4Files))
 		wg := sync.WaitGroup{}
-		wg.Add(len(mp4Files))
 		for range workers {
-			go func() {
+			wg.Add(1)
+			go func(wg *sync.WaitGroup) {
 				defer wg.Done()
 				helper.Downloader_mp4(client, path, filename, jobs)
-			}()
+			}(&wg)
 		}
 
 		// continually feed in urls to workers
