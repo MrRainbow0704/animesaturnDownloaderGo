@@ -2,9 +2,7 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"flag"
-	"fmt"
 	"net/http"
 	"net/url"
 	"os"
@@ -16,7 +14,10 @@ import (
 	"time"
 
 	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/helper"
+	log "github.com/MrRainbow0704/animesaturnDownloaderGo/internal/logger"
 )
+
+const VERSION = "0.1.0"
 
 type cookieJar struct {
 	jar map[string][]*http.Cookie
@@ -42,14 +43,19 @@ func main() {
 	cwd, _ := os.Getwd()
 
 	// initialize flags arguments
-	const usage = `Flag di AnimesaturnDownloader:
+	const usage = `AnimesaturnDownloader è una utility per scaricare gli anime dal sito AnimeSaturn.
+Scritto in Go da Marco Simone.
+
+utilizzo: animesaturn-downloader -u <link> -n <filename> [-v] [-d <dir>] [-f <first>] [-l <last>] [-w <workers>]
   -h, --help		stampa le informazioni di aiuto
-  -w, --worker		quanti worker da utilizzare		[Default: 3]
-  -n, --filename	nome del file senza estensione		[Obbligatorio]
-  -u, --url		link alla pagina dell'anime		[Obbligatorio]
-  -f, --first		primo episodio da scaricare		[Default: 0]
-  -l, --last		ultimo episodio da scaricare		[Default: -1]
-  -d, --dir		percorso dove salvare i file		[Default: percorso corrente]
+  -v, --verbose		stampa altre informazioni di debug
+  -V, --version		stampa la versione del programma e termina il programma
+  -u, --url		link alla pagina dell'anime		[obbligatorio]
+  -n, --filename	nome del file senza estensione		[obbligatorio]
+  -d, --dir		percorso dove salvare i file		[default: percorso corrente]
+  -f, --first		primo episodio da scaricare		[default: 0]
+  -l, --last		ultimo episodio da scaricare		[default: -1]
+  -w, --worker		quanti worker da utilizzare		[default: 3]
 `
 
 	var link string
@@ -70,8 +76,14 @@ func main() {
 	var filename string
 	flag.StringVar(&filename, "filename", "D", "nome del file, senza numero di episodio e estensione")
 	flag.StringVar(&filename, "n", "D", "nome del file, senza numero di episodio e estensione")
+	var verbose bool
+	flag.BoolVar(&verbose, "verbose", false, "stampa altre informazioni di debug")
+	flag.BoolVar(&verbose, "v", false, "stampa altre informazioni di debug")
+	var version bool
+	flag.BoolVar(&version, "version", false, "stampa la versione del programma")
+	flag.BoolVar(&version, "V", false, "stampa la versione del programma")
 
-	flag.Usage = func() { fmt.Print(usage) }
+	flag.Usage = func() { log.Print(usage) }
 	flag.Parse()
 
 	if noFlags() {
@@ -79,11 +91,11 @@ func main() {
 		reader := bufio.NewReader(os.Stdin)
 
 		// Getting the page link
-		fmt.Print("Inserisci il link alla pagina dell'anime: ")
+		log.Print("Inserisci il link alla pagina dell'anime: ")
 		link, _ = reader.ReadString('\n')
 
 		// Getting the amount of workers to use
-		fmt.Print("Inserisci il numero di workers da usare: ")
+		log.Print("Inserisci il numero di workers da usare: ")
 		workersStr, _ := reader.ReadString('\n')
 		if i, err := strconv.Atoi(workersStr); err == nil {
 			workers = i
@@ -92,14 +104,14 @@ func main() {
 		}
 
 		// Getting the first and last episodes to download
-		fmt.Print("Inserisci il primo episodio da scaricare: ")
+		log.Print("Inserisci il primo episodio da scaricare: ")
 		primoStr, _ := reader.ReadString('\n')
 		if i, err := strconv.Atoi(primoStr); err == nil {
 			primo = i
 		} else {
 			primo = 0
 		}
-		fmt.Print("Inserisci l'ultimo episodio da scaricare: ")
+		log.Print("Inserisci l'ultimo episodio da scaricare: ")
 		ultimoStr, _ := reader.ReadString('\n')
 		if i, err := strconv.Atoi(ultimoStr); err == nil {
 			ultimo = i
@@ -108,14 +120,21 @@ func main() {
 		}
 
 		// Getting the path where to store the downloads
-		fmt.Printf("Inserisci il percorso dove salvare i file [Vuoto per: \"%s\"]: ", path)
+		log.Printf("Inserisci il percorso dove salvare i file [Vuoto per: \"%s\"]: ", path)
 		path, _ = reader.ReadString('\n')
 
 		// Getting filenames
-		fmt.Print("Inserisci il nome per i file: ")
+		log.Print("Inserisci il nome per i file: ")
 		filename, _ = reader.ReadString('\n')
-	} else if !noFlags() && (link == "D" || filename == "D") {
+	} else if (link == "D" || filename == "D") && !verbose && !version {
 		panic("I flag --url e --dir sono obbligatori")
+	} else if version {
+		log.Printf("AnimesaturnDownloaderGo %s", VERSION)
+		return
+	}
+
+	if verbose {
+		log.Verbose = true
 	}
 
 	// Input formatting
@@ -125,74 +144,76 @@ func main() {
 		path = filepath.Join(cwd, path)
 	}
 	if err := os.MkdirAll(path, 0777); err != nil {
-		panic(fmt.Sprintf("Errore durante la creazione della directory `%s`: %s", path, err))
+		log.Fatalf("Errore durante la creazione della directory `%s`: %s", path, err)
 	}
 	filename = strings.TrimSpace(filename)
 
-	fmt.Printf("Scaricando da `%s`\n"+
-		"da episodio %d a %d\n"+
-		"in `%s`\n"+
-		"con nome `%s{%d-%d}.mp4`\n"+
-		"usando %d workers.\n",
+	log.Infof("Scaricando da `%s`\n"+
+		"\tda episodio %d a %d\n"+
+		"\tin `%s`\n"+
+		"\tcon nome `%s{%d-%d}.mp4`\n"+
+		"\tusando %d workers.\n",
 		link, primo, ultimo, path, filename, primo, ultimo, workers,
 	)
 
 	var startTime = time.Now()
 	run(link, primo, ultimo, path, filename, workers)
-	fmt.Println("Download completati!")
-	fmt.Printf("Tempo inpiegato: %s\n", time.Since(startTime).String())
+	log.Infof("Tempo inpiegato: %s\n", time.Since(startTime).String())
 }
 
 func run(link string, primo int, ultimo int, path string, filename string, workers int) {
 	// Setting up session
-	fmt.Println("Inizializzando la sessione...")
+	log.Println("Ottenimento dei file...")
+	log.Infoln("Inizializzando la sessione...")
 	client := &http.Client{Jar: &cookieJar{make(map[string][]*http.Cookie)}}
-	fmt.Println("Sessione creata!")
+	log.Infoln("Sessione creata!")
 
 	// getting episode links
-	fmt.Println("Cercando i link agli episodi...")
-	var episodi [][]byte
+	log.Infoln("Cercando i link agli episodi...")
+	var episodi []string
 	if e, err := helper.GetEpisodeLinks(client, link); err == nil {
 		episodi = e
 	} else {
-		panic(fmt.Sprintf("Errore nello scraping dei link agli episodi: %s\n", err))
+		log.Fatalf("Errore nello scraping dei link agli episodi: %s\n", err)
 	}
-	if bytes.Equal(episodi[0], []byte("NO EP 0")) && primo == 0 {
+	if episodi[0] == "NO EP 0" && primo == 0 {
 		primo = 1
 	}
 	if ultimo == -1 {
 		ultimo = len(episodi) - 1
 	}
-	fmt.Println("Link agli episodi trovati!")
+
+	log.Infof("Trovati %d episodi.\n", len(episodi))
 
 	// get stream links
-	fmt.Println("Cercando i link alle stream...")
+	log.Infoln("Cercando i link alle stream...")
 	var epLinks = []helper.IndexedUrl{}
 	for i := primo; i <= ultimo; i++ {
-		if indexedLink, err := helper.GetStreamLink(client, string(episodi[i]), i); err == nil {
+		if indexedLink, err := helper.GetStreamLink(client, episodi[i], i); err == nil {
 			epLinks = append(epLinks, indexedLink)
 		} else {
-			panic(fmt.Sprintf("Errore nello scraping dei link alle stream: %s", err))
+			log.Fatalf("Errore nello scraping dei link alle stream: %s", err)
 		}
 	}
-	fmt.Println("Link alle stream trovati!")
+	log.Infof("Trovate %d stream.\n", len(epLinks))
 
 	// get file links
-	fmt.Println("Cercando i link ai file...")
+	log.Infoln("Cercando i link ai file...")
 	var videoLinks = []helper.IndexedUrl{}
 	for i := range epLinks {
-		if indexedLink, err := helper.GetVideoLink(client, string(epLinks[i].Url), epLinks[i].Index); err == nil {
+		if indexedLink, err := helper.GetVideoLink(client, epLinks[i].Url, epLinks[i].Index); err == nil {
 			videoLinks = append(videoLinks, indexedLink)
 		} else {
-			panic(fmt.Sprintf("Errore nello scraping dei link ai file: %s", err))
+			log.Fatalf("Errore nello scraping dei link ai file: %s", err)
 		}
 	}
-	fmt.Println("Link ai file trovati!")
-	fmt.Println("Inizio download...")
+	log.Infoln("Link ai file trovati.")
+	log.Println("URL ai video ottenuti.")
+	log.Println("Inizio download...")
 	var m3u8Files []helper.IndexedUrl
 	var mp4Files []helper.IndexedUrl
 	for _, link := range videoLinks {
-		if strings.HasSuffix(string(link.Url), ".m3u8") {
+		if strings.HasSuffix(link.Url, ".m3u8") {
 			m3u8Files = append(m3u8Files, link)
 		} else {
 			mp4Files = append(mp4Files, link)
@@ -200,10 +221,10 @@ func run(link string, primo int, ultimo int, path string, filename string, worke
 	}
 	if len(m3u8Files) > 0 {
 		// new style downloads
-		fmt.Println("Rilevati file m3u8! Inizializando il download tramite FFMPEG...")
+		log.Infoln("Rilevati file m3u8! Inizializando il download tramite FFMPEG...")
 		err := exec.Command("ffmpeg", "-version").Run()
 		if err != nil {
-			panic("Per questo tipo di file è necessario FFMPEG.")
+			log.Fatalln("Per questo tipo di file è necessario FFMPEG. Per favore installalo e riprova.")
 		}
 
 		jobs := make(chan helper.IndexedUrl, len(m3u8Files))
@@ -241,4 +262,6 @@ func run(link string, primo int, ultimo int, path string, filename string, worke
 		close(jobs) // no more urls, so tell workers to stop their loop
 		wg.Wait()
 	}
+
+	log.Println("Download completati.")
 }

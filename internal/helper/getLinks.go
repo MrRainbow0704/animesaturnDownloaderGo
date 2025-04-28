@@ -1,105 +1,96 @@
 package helper
 
 import (
-	"fmt"
-	"io"
 	"net/http"
-	"regexp"
 	"strings"
-
-	"github.com/dlclark/regexp2"
+	
+	log "github.com/MrRainbow0704/animesaturnDownloaderGo/internal/logger"
+	"github.com/PuerkitoBio/goquery"
 )
 
 type IndexedUrl struct {
 	Index int
-	Url   []byte
+	Url   string
 }
 
-func GetEpisodeLinks(c *http.Client, u string) ([][]byte, error) {
-	linkRegexp := regexp.MustCompile("(?i)<a[^>]*class=[\"'][^>]*bottone-ep[^>]*[\"'][^>]*[^>]*>")
-	hrefRegexp := regexp2.MustCompile("(?i)(?<=href=[\"']).*?(?=[\"'])", 0)
-	zeroEpRegexp := regexp.MustCompile("(?i)[^0-9A-Za-z]*ep-0[^0-9A-Za-z]*")
-
+func GetEpisodeLinks(c *http.Client, u string) ([]string, error) {
 	req, _ := http.NewRequest("GET", u, nil)
 	res, err := c.Do(req)
 	if err != nil || res.StatusCode != 200 {
-		fmt.Printf("Errore: %s\n", err)
-		fmt.Printf("Status: %s\n", res.Status)
+		log.Errorf("La richiesta HTTP ha prodotto un errore: %s\n", err)
 		return nil, err
 	}
-	body, err := io.ReadAll(res.Body)
+	doc, err := goquery.NewDocumentFromReader(res.Body)
 	if err != nil {
-		fmt.Printf("Errore: %s\n", err)
+		log.Errorf("Errore durante il parsing della pagina: %s\n", err)
 		return nil, err
 	}
-	content := strings.Replace(string(body), " ", "", -1)
-	links := linkRegexp.FindAll([]byte(content), -1)
-	linksList := [][]byte{}
-	for i := 0; i < len(links); i++ {
-		if match, err := hrefRegexp.FindStringMatch(string(links[i])); err == nil {
-			linksList = append(linksList, []byte(match.String()))
+	links := []string{}
+	ep0 := false
+	doc.Find("a.bottone-ep").Each(func(i int, s *goquery.Selection) {
+		href, _ := s.Attr("href")
+		links = append(links, href)
+		if strings.Contains(href, "ep-0") {
+			ep0 = true
 		}
+	})
+	if !ep0 {
+		return append([]string{"NO EP 0"}, links...), nil
 	}
-	if zeroEpRegexp.FindAll(linksList[0], -1) != nil {
-		return linksList, nil
-	}
-	return append([][]byte{[]byte("NO EP 0")}, linksList...), nil
+	return links, nil
 }
 
 func GetStreamLink(c *http.Client, u string, i int) (IndexedUrl, error) {
-	linkRegexp := regexp.MustCompile("(?i)<a[^>]*href=[\"'][^>]*watch\\?[^>]*[\"'][^>]*>")
-	hrefRegexp := regexp2.MustCompile("(?i)(?<=href=[\"']).*?(?=[\"'])", 0)
-
 	req, _ := http.NewRequest("GET", u, nil)
 	res, err := c.Do(req)
 	if err != nil || res.StatusCode != 200 {
-		fmt.Printf("Errore: %s\n", err)
-		fmt.Printf("Status: %s\n", res.Status)
+		log.Errorf("La richiesta HTTP ha prodotto un errore: %s\n", err)
 		return IndexedUrl{}, err
 	}
-	body, err := io.ReadAll(res.Body)
+	doc, err := goquery.NewDocumentFromReader(res.Body)
 	if err != nil {
-		fmt.Printf("Errore: %s\n", err)
+		log.Errorf("Errore durante il parsing della pagina: %s\n", err)
 		return IndexedUrl{}, err
 	}
-	content := strings.Replace(string(body), " ", "", -1)
-	link := linkRegexp.FindAll([]byte(content), -1)[0]
-	var streamLink string
-	if match, err := hrefRegexp.FindStringMatch(string(link)); err == nil {
-		streamLink = match.String()
-	}
-
-	return IndexedUrl{i, []byte(streamLink)}, nil
+	var link string
+	doc.Find("a").Each(func(i int, s *goquery.Selection) {
+		href, _ := s.Attr("href")
+		if strings.Contains(href, "/watch?") {
+			link = href
+		}
+	})
+	return IndexedUrl{i, link}, nil
 }
 
 func GetVideoLink(c *http.Client, u string, i int) (IndexedUrl, error) {
-	mp4Regexp := regexp2.MustCompile("https:\\/\\/.*?(?=\\.mp4)", 0)
-	m3u8Regexp := regexp2.MustCompile("https:\\/\\/.*?(?=\\.m3u8)", 0)
+	// mp4Regexp := regexp2.MustCompile("https:\\/\\/.*?.mp4", 0)
+	// m3u8Regexp := regexp2.MustCompile("https:\\/\\/.*?.m3u8	", 0)
 	req, _ := http.NewRequest("GET", u, nil)
 	res, err := c.Do(req)
 	if err != nil || res.StatusCode != 200 {
-		fmt.Printf("Errore: %s\n", err)
-		fmt.Printf("Status: %s\n", res.Status)
+		log.Errorf("La richiesta HTTP ha prodotto un errore: %s\n", err)
 		return IndexedUrl{}, err
 	}
-	body, err := io.ReadAll(res.Body)
+	doc, err := goquery.NewDocumentFromReader(res.Body)
 	if err != nil {
-		fmt.Printf("Errore: %s\n", err)
+		log.Errorf("Errore durante il parsing della pagina: %s\n", err)
 		return IndexedUrl{}, err
 	}
-	content := strings.Replace(string(body), " ", "", -1)
-	mp4link, err := mp4Regexp.FindStringMatch(content)
-	if err != nil {
-		fmt.Printf("Errore: %s\n", err)
-		return IndexedUrl{}, err
-	}
-	if mp4link.Length == 0 {
-		m3u8link, err := m3u8Regexp.FindStringMatch(content)
-		if err != nil {
-			fmt.Printf("Errore: %s\n", err)
-			return IndexedUrl{}, err
+	var link string
+	doc.Find("video").Each(func(i int, s *goquery.Selection) {
+		if c := s.ChildrenFiltered("source"); c.Length() > 0 {
+			c.Each(func(i int, ss *goquery.Selection) {
+				src, _ := ss.Attr("src")
+				if strings.Contains(src, ".mp4") || strings.Contains(src, ".m3u8") {
+					link = src
+				}
+			})
+			return
 		}
-		return IndexedUrl{i, []byte(m3u8link.String() + ".m3u8")}, nil
-	}
-	return IndexedUrl{i, []byte(mp4link.String() + ".mp4")}, nil
+		src, _ := s.Attr("src")
+		if strings.Contains(src, ".mp4") || strings.Contains(src, ".m3u8") {
+			link = src
+		}
+	})
+	return IndexedUrl{i, link}, nil
 }

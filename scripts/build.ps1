@@ -1,2 +1,2 @@
-go mod tidy
-go build -o ./bin/download-anime.exe ./cmd
+go mod download && go mod verify
+go build -o ./bin/ ./cmd/...
