@@ -63,8 +63,6 @@ func GetStreamLink(c *http.Client, u string, i int) (IndexedUrl, error) {
 }
 
 func GetVideoLink(c *http.Client, u string, i int) (IndexedUrl, error) {
-	// mp4Regexp := regexp2.MustCompile("https:\\/\\/.*?.mp4", 0)
-	// m3u8Regexp := regexp2.MustCompile("https:\\/\\/.*?.m3u8	", 0)
 	req, _ := http.NewRequest("GET", u, nil)
 	res, err := c.Do(req)
 	if err != nil || res.StatusCode != 200 {

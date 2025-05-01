@@ -1,14 +1,12 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -31,137 +29,173 @@ func (p *cookieJar) Cookies(u *url.URL) []*http.Cookie {
 	return p.jar[u.Host]
 }
 
-func noFlags() bool {
-	found := true
-	flag.Visit(func(f *flag.Flag) {
-		found = false
-	})
-	return found
-}
-
 func main() {
 	cwd, _ := os.Getwd()
+	downloadCommand := flag.NewFlagSet("download", flag.ExitOnError)
+	searchCommand := flag.NewFlagSet("search", flag.ExitOnError)
 
-	// initialize flags arguments
-	const usage = `AnimesaturnDownloader è una utility per scaricare gli anime dal sito AnimeSaturn.
+	flag.Usage = func() {
+		log.Print(`AnimesaturnDownloader è una utility per scaricare gli anime dal sito AnimeSaturn.
 Scritto in Go da Marco Simone.
 
-utilizzo: animesaturn-downloader -u <link> -n <filename> [-v] [-d <dir>] [-f <first>] [-l <last>] [-w <workers>]
+
+Questa schermata di aiuto è divisa in più parti, usa "animesaturn-downloader <sottocomando> -h" per vedere la schermata di aiuto per il sottocomando specifico.
+
+I sottocomandi disponibili sono:
+  download		Scarica gli episodi di un anime
+  search		Cerca un anime per nome
+
+Utilizzo: animesaturn-downloader <sottocomando> [opzioni]
+
+Flag globali:
   -h, --help		stampa le informazioni di aiuto
   -v, --verbose		stampa altre informazioni di debug
   -V, --version		stampa la versione del programma e termina il programma
-  -u, --url		link alla pagina dell'anime		[obbligatorio]
-  -n, --filename	nome del file senza estensione		[obbligatorio]
-  -d, --dir		percorso dove salvare i file		[default: percorso corrente]
-  -f, --first		primo episodio da scaricare		[default: 0]
-  -l, --last		ultimo episodio da scaricare		[default: -1]
-  -w, --worker		quanti worker da utilizzare		[default: 3]
-`
+`)
+	}
+	downloadCommand.Usage = func() {
+		log.Print(`AnimesaturnDownloader è una utility per scaricare gli anime dal sito AnimeSaturn.
+Scritto in Go da Marco Simone.
 
-	var link string
-	flag.StringVar(&link, "url", "D", "link alla pagina dell'anime")
-	flag.StringVar(&link, "u", "D", "link alla pagina dell'anime")
-	var workers int
-	flag.IntVar(&workers, "workers", 3, "quanti worker da utilizzare")
-	flag.IntVar(&workers, "w", 3, "quanti worker da utilizzare")
-	var primo int
-	flag.IntVar(&primo, "first", 0, "primo episodio da scaricare")
-	flag.IntVar(&primo, "f", 0, "primo episodio da scaricare")
-	var ultimo int
-	flag.IntVar(&ultimo, "last", -1, "ultimo episodio da scaricare")
-	flag.IntVar(&ultimo, "l", -1, "ultimo episodio da scaricare")
-	var path string
-	flag.StringVar(&path, "dir", cwd, "percorso dove salvare i file")
-	flag.StringVar(&path, "d", cwd, "percorso dove salvare i file")
-	var filename string
-	flag.StringVar(&filename, "filename", "D", "nome del file, senza numero di episodio e estensione")
-	flag.StringVar(&filename, "n", "D", "nome del file, senza numero di episodio e estensione")
-	var verbose bool
-	flag.BoolVar(&verbose, "verbose", false, "stampa altre informazioni di debug")
-	flag.BoolVar(&verbose, "v", false, "stampa altre informazioni di debug")
+
+Schermata di aiuto per il sottocomando "download".
+
+Utilizzo: animesaturn-downloader download -u <url> -n <file> [-v] [-d <percorso>] [-f <numero>] [-l <numero>] [-w <numero>]
+
+Flag per il sottocomando "download":
+  -u, --url <url>		link alla pagina dell'anime		[obbligatorio]
+  -n, --filename <file>		nome del file senza estensione		[obbligatorio]
+  -d, --dir <percorso>		percorso dove salvare i file		[default: percorso corrente]
+  -f, --first <numero>		primo episodio da scaricare		[default: 0]
+  -l, --last <numero>		ultimo episodio da scaricare		[default: -1]
+  -w, --worker <numero>		quanti worker da utilizzare		[default: 3]
+`)
+	}
+	searchCommand.Usage = func() {
+		log.Print(`AnimesaturnDownloader è una utility per scaricare gli anime dal sito AnimeSaturn.
+Scritto in Go da Marco Simone.
+
+
+Schermata di aiuto per il sottocomando "search".
+
+Utilizzo: animesaturn-downloader search -s <search>
+
+Flag per il sottocomando "search":
+  -s, --search <search>		nome dell'anime da cercare		[obbligatorio]
+`)
+	}
+
+	// Inizializzazione dei flag
+	flag.BoolVar(&log.Verbose, "verbose", false, "stampa altre informazioni di debug")
+	flag.BoolVar(&log.Verbose, "v", false, "stampa altre informazioni di debug")
+	downloadCommand.BoolVar(&log.Verbose, "verbose", false, "stampa altre informazioni di debug")
+	downloadCommand.BoolVar(&log.Verbose, "v", false, "stampa altre informazioni di debug")
+	searchCommand.BoolVar(&log.Verbose, "verbose", false, "stampa altre informazioni di debug")
+	searchCommand.BoolVar(&log.Verbose, "v", false, "stampa altre informazioni di debug")
 	var version bool
 	flag.BoolVar(&version, "version", false, "stampa la versione del programma")
 	flag.BoolVar(&version, "V", false, "stampa la versione del programma")
+	downloadCommand.BoolVar(&version, "version", false, "stampa la versione del programma")
+	downloadCommand.BoolVar(&version, "V", false, "stampa la versione del programma")
+	searchCommand.BoolVar(&version, "version", false, "stampa la versione del programma")
+	searchCommand.BoolVar(&version, "V", false, "stampa la versione del programma")
+	var link string
+	downloadCommand.StringVar(&link, "url", "", "link alla pagina dell'anime")
+	downloadCommand.StringVar(&link, "u", "", "link alla pagina dell'anime")
+	var filename string
+	downloadCommand.StringVar(&filename, "filename", "", "nome del file, senza numero di episodio e estensione")
+	downloadCommand.StringVar(&filename, "n", "", "nome del file, senza numero di episodio e estensione")
+	var path string
+	downloadCommand.StringVar(&path, "dir", cwd, "percorso dove salvare i file")
+	downloadCommand.StringVar(&path, "d", cwd, "percorso dove salvare i file")
+	var primo int
+	downloadCommand.IntVar(&primo, "first", 0, "primo episodio da scaricare")
+	downloadCommand.IntVar(&primo, "f", 0, "primo episodio da scaricare")
+	var ultimo int
+	downloadCommand.IntVar(&ultimo, "last", -1, "ultimo episodio da scaricare")
+	downloadCommand.IntVar(&ultimo, "l", -1, "ultimo episodio da scaricare")
+	var workers int
+	downloadCommand.IntVar(&workers, "workers", 3, "quanti worker da utilizzare")
+	downloadCommand.IntVar(&workers, "w", 3, "quanti worker da utilizzare")
+	var search string
+	searchCommand.StringVar(&search, "search", "", "nome dell'anime da cercare")
+	searchCommand.StringVar(&search, "s", "3", "nome dell'anime da cercare")
 
-	flag.Usage = func() { log.Print(usage) }
 	flag.Parse()
 
-	if noFlags() {
-		// initializing reader
-		reader := bufio.NewReader(os.Stdin)
-
-		// Getting the page link
-		log.Print("Inserisci il link alla pagina dell'anime: ")
-		link, _ = reader.ReadString('\n')
-
-		// Getting the amount of workers to use
-		log.Print("Inserisci il numero di workers da usare: ")
-		workersStr, _ := reader.ReadString('\n')
-		if i, err := strconv.Atoi(workersStr); err == nil {
-			workers = i
-		} else {
-			workers = 0
-		}
-
-		// Getting the first and last episodes to download
-		log.Print("Inserisci il primo episodio da scaricare: ")
-		primoStr, _ := reader.ReadString('\n')
-		if i, err := strconv.Atoi(primoStr); err == nil {
-			primo = i
-		} else {
-			primo = 0
-		}
-		log.Print("Inserisci l'ultimo episodio da scaricare: ")
-		ultimoStr, _ := reader.ReadString('\n')
-		if i, err := strconv.Atoi(ultimoStr); err == nil {
-			ultimo = i
-		} else {
-			ultimo = -1
-		}
-
-		// Getting the path where to store the downloads
-		log.Printf("Inserisci il percorso dove salvare i file [Vuoto per: \"%s\"]: ", path)
-		path, _ = reader.ReadString('\n')
-
-		// Getting filenames
-		log.Print("Inserisci il nome per i file: ")
-		filename, _ = reader.ReadString('\n')
-	} else if (link == "D" || filename == "D") && !verbose && !version {
-		panic("I flag --url e --dir sono obbligatori")
-	} else if version {
+	if version {
 		log.Printf("AnimesaturnDownloaderGo %s", VERSION)
 		return
 	}
-
-	if verbose {
-		log.Verbose = true
+	if len(os.Args) < 2 {
+		log.Fatal("Nessun sottocomando specificato.\nUsa \"animesaturn-downloader -h\" per vedere la schermata di aiuto.")
+		return
 	}
 
-	// Input formatting
-	link = strings.TrimSpace(link)
-	path = strings.TrimSpace(path)
-	if !filepath.IsAbs(path) {
-		path = filepath.Join(cwd, path)
-	}
-	if err := os.MkdirAll(path, 0777); err != nil {
-		log.Fatalf("Errore durante la creazione della directory `%s`: %s", path, err)
-	}
-	filename = strings.TrimSpace(filename)
+	switch os.Args[1] {
+	case "download":
+		downloadCommand.Parse(os.Args[2:])
+		if version {
+			log.Printf("AnimesaturnDownloaderGo %s", VERSION)
+			return
+		}
+		link = strings.TrimSpace(link)
+		filename = strings.TrimSpace(filename)
+		if link == "" || filename == "" {
+			log.Fatal("I flag --filename (-n) e --dir (-u) sono obbligatori")
+			return
+		}
 
-	log.Infof("Scaricando da `%s`\n"+
-		"\tda episodio %d a %d\n"+
-		"\tin `%s`\n"+
-		"\tcon nome `%s{%d-%d}.mp4`\n"+
-		"\tusando %d workers.\n",
-		link, primo, ultimo, path, filename, primo, ultimo, workers,
-	)
+		path = strings.TrimSpace(path)
+		if !filepath.IsAbs(path) {
+			path = filepath.Join(cwd, path)
+		}
+		if err := os.MkdirAll(path, 0777); err != nil {
+			log.Printf("Errore durante la creazione della directory `%s`: %s", path, err)
+		}
 
-	var startTime = time.Now()
-	run(link, primo, ultimo, path, filename, workers)
-	log.Infof("Tempo inpiegato: %s\n", time.Since(startTime).String())
+		if primo < 0 {
+			log.Print("Il primo episodio deve essere maggiore o uguale a 0")
+			return
+		}
+		if ultimo < primo {
+			log.Print("L'ultimo episodio deve essere maggiore o uguale al primo")
+			return
+		}
+		if workers < 1 {
+			log.Print("Il numero di workers deve essere maggiore di 0")
+			return
+		}
+
+		log.Infof("Scaricando da `%s`\n"+
+			"\tda episodio %d a %d\n"+
+			"\tin `%s`\n"+
+			"\tcon nome `%s{%d-%d}.mp4`\n"+
+			"\tusando %d workers.\n",
+			link, primo, ultimo, path, filename, primo, ultimo, workers,
+		)
+
+		startTime := time.Now()
+		runDownload(link, primo, ultimo, path, filename, workers)
+		log.Infof("Tempo inpiegato: %s\n", time.Since(startTime).String())
+	case "search":
+		searchCommand.Parse(os.Args[2:])
+		if version {
+			log.Printf("AnimesaturnDownloaderGo %s", VERSION)
+			return
+		}
+		search = strings.TrimSpace(search)
+		if search == "" {
+			log.Fatal("Il flag --search (-s) è obbligatorio")
+			return
+		}
+		runSearch(search)
+	default:
+		log.Fatalf("Sottocomando `%s` non riconosciuto.\n", os.Args[1])
+	}
 }
 
-func run(link string, primo int, ultimo int, path string, filename string, workers int) {
+func runDownload(link string, primo int, ultimo int, path string, filename string, workers int) {
 	// Setting up session
 	log.Println("Ottenimento dei file...")
 	log.Infoln("Inizializzando la sessione...")
@@ -264,4 +298,8 @@ func run(link string, primo int, ultimo int, path string, filename string, worke
 	}
 
 	log.Println("Download completati.")
+}
+
+func runSearch(search string) {
+
 }
