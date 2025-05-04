@@ -5,8 +5,8 @@ import (
 	"os"
 )
 
-var l *log.Logger
 var Verbose bool = false
+var l *log.Logger
 
 func init() {
 	l = log.New(os.Stdout, "", 0)

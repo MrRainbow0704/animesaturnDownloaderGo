@@ -1,6 +1,38 @@
 {
   "extends": "@tsconfig/svelte/tsconfig.json",
   "compilerOptions": {
+    "paths": {
+      "$src": [
+        "./src"
+      ],
+      "$src/*": [
+        "./src/*"
+      ],
+      "$assets": [
+        "./src/assets"
+      ],
+      "$assets/*": [
+        "./src/assets/*"
+      ],
+      "$lib": [
+        "./src/lib"
+      ],
+      "$lib/*": [
+        "./src/lib/*"
+      ],
+      "$components": [
+        "./src/components"
+      ],
+      "$components/*": [
+        "./src/components/*"
+      ],
+      "$wails": [
+        "./wailsjs"
+      ],
+      "$wails/*": [
+        "./wailsjs/*"
+      ],
+    },
     "target": "ESNext",
     "useDefineForClassFields": true,
     "module": "ESNext",

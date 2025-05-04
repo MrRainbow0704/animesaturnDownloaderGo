@@ -4,6 +4,7 @@ go 1.24.0
 
 require (
 	github.com/PuerkitoBio/goquery v1.10.3
+	github.com/dlclark/regexp2 v1.11.5
 	github.com/u2takey/ffmpeg-go v0.5.0
 	github.com/wailsapp/wails/v2 v2.10.1
 )

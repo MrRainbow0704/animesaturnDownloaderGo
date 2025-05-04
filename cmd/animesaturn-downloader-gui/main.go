@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	app := NewApp()
+	app := &App{}
 	opts := &options.App{
 		Title:  "Animesaturn Downlaoder",
 		Width:  1024,
@@ -18,11 +18,12 @@ func main() {
 		AssetServer: &assetserver.Options{
 			Assets: frontend.Assets,
 		},
-		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
+		BackgroundColour: &options.RGBA{R: 18, G: 22, B: 25, A: 1},
 		OnStartup:        app.startup,
 		Bind: []any{
 			app,
 		},
+		Logger: &log.AppLogger{},
 	}
 
 	if err := wails.Run(opts); err != nil {

@@ -2,8 +2,6 @@ package main
 
 import (
 	"flag"
-	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,18 +14,6 @@ import (
 )
 
 const VERSION = "0.1.0"
-
-type cookieJar struct {
-	jar map[string][]*http.Cookie
-}
-
-func (p *cookieJar) SetCookies(u *url.URL, cookies []*http.Cookie) {
-	p.jar[u.Host] = cookies
-}
-
-func (p *cookieJar) Cookies(u *url.URL) []*http.Cookie {
-	return p.jar[u.Host]
-}
 
 func main() {
 	cwd, _ := os.Getwd()
@@ -199,7 +185,7 @@ func runDownload(link string, primo int, ultimo int, path string, filename strin
 	// Setting up session
 	log.Println("Ottenimento dei file...")
 	log.Infoln("Inizializzando la sessione...")
-	client := &http.Client{Jar: &cookieJar{make(map[string][]*http.Cookie)}}
+	client := helper.NewClient()
 	log.Infoln("Sessione creata!")
 
 	// getting episode links
@@ -301,5 +287,21 @@ func runDownload(link string, primo int, ultimo int, path string, filename strin
 }
 
 func runSearch(search string) {
+	log.Infoln("Inizializzando la sessione...")
+	client := helper.NewClient()
+	log.Infoln("Sessione creata!")
 
+	log.Infoln("Cercando gli anime...")
+	var anime []helper.Anime
+	if a, err := helper.GetSearchResults(client, search); err == nil {
+		anime = a
+	} else {
+		log.Fatalf("Errore nello scraping dei link agli anime: %s\n", err)
+	}
+	log.Infof("Trovati %d anime che corrispondono alla ricerca.\n", len(anime))
+
+	for _, a := range anime {
+		log.Printf("Titolo: %s\n", a.Title)
+		log.Printf("Url: %s\n", a.Url)
+	}
 }
