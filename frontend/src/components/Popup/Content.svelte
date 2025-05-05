@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { id } from "$lib/store";
 	import { getContext } from "svelte";
+	
 	const modalId: string = getContext("modalId");
 	const handleKeydown = (e: KeyboardEvent) => {
 		if (e.key === "Escape") {
@@ -34,7 +35,7 @@
 		top: 0;
 		width: 100%;
 		height: 100%;
-		background-color: rgba(0, 0, 0, 0.4);
+		background: rgba(0, 0, 0, 0.4);
 		align-content: center;
 		justify-content: center;
 	}
@@ -42,7 +43,7 @@
 		position: relative;
 		overflow-y: hidden;
 		background: transparent;
-		background-color: var(--secondary);
+		background-color: var(--primary);
 		padding: 2rem;
 		margin: auto;
 		height: 80%;

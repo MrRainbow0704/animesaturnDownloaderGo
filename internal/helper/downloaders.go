@@ -12,6 +12,20 @@ import (
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
 
+type PassThru struct {
+	io.Reader
+	Total int64
+}
+
+func (pt *PassThru) Read(p []byte) (int, error) {
+	n, err := pt.Reader.Read(p)
+	if err == nil {
+		pt.Total += int64(n)
+	}
+
+	return n, err
+}
+
 func DownloadFile(c *http.Client, filepath string, url string) error {
 	// Create the file
 	out, err := os.Create(filepath)
@@ -29,12 +43,30 @@ func DownloadFile(c *http.Client, filepath string, url string) error {
 	}
 	defer resp.Body.Close()
 
-	// Writer the body to file
+	src := &PassThru{Reader: resp.Body}
+	done := make(chan bool)
+	progress := make(chan int64)
+	go func() {
+	Loop:
+		for {
+			select {
+			case <-done:
+				log.Println("Done!")
+				break Loop
+			default:
+				progress <- src.Total
+				log.Printf("%s: %d/%d", url, src.Total, resp.ContentLength)
+			}
+		}
+	}()
+
+	// Write the body to file
 	log.Infof("Scrivendo il file `%s`...\n", filepath)
-	if _, err = io.Copy(out, resp.Body); err != nil {
-		log.Errorf("La scrittura del file `%s` ha prodotto un errore: %s\n",filepath, err)
+	if _, err = io.Copy(out, src); err != nil {
+		log.Errorf("La scrittura del file `%s` ha prodotto un errore: %s\n", filepath, err)
 		return err
 	}
+	done <- true
 	log.Infof("Terminata la scrittura del file `%s`.\n", filepath)
 	return nil
 }

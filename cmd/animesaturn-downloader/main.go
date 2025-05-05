@@ -11,9 +11,8 @@ import (
 
 	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/helper"
 	log "github.com/MrRainbow0704/animesaturnDownloaderGo/internal/logger"
+	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/version"
 )
-
-const VERSION = "0.1.0"
 
 func main() {
 	cwd, _ := os.Getwd()
@@ -68,6 +67,7 @@ Utilizzo: animesaturn-downloader search -s <search>
 
 Flag per il sottocomando "search":
   -s, --search <search>		nome dell'anime da cercare		[obbligatorio]
+  -b, --base-url <url>		url alla home di animesaturn		[obbligatorio]
 `)
 	}
 
@@ -78,13 +78,13 @@ Flag per il sottocomando "search":
 	downloadCommand.BoolVar(&log.Verbose, "v", false, "stampa altre informazioni di debug")
 	searchCommand.BoolVar(&log.Verbose, "verbose", false, "stampa altre informazioni di debug")
 	searchCommand.BoolVar(&log.Verbose, "v", false, "stampa altre informazioni di debug")
-	var version bool
-	flag.BoolVar(&version, "version", false, "stampa la versione del programma")
-	flag.BoolVar(&version, "V", false, "stampa la versione del programma")
-	downloadCommand.BoolVar(&version, "version", false, "stampa la versione del programma")
-	downloadCommand.BoolVar(&version, "V", false, "stampa la versione del programma")
-	searchCommand.BoolVar(&version, "version", false, "stampa la versione del programma")
-	searchCommand.BoolVar(&version, "V", false, "stampa la versione del programma")
+	var ver bool
+	flag.BoolVar(&ver, "version", false, "stampa la versione del programma")
+	flag.BoolVar(&ver, "V", false, "stampa la versione del programma")
+	downloadCommand.BoolVar(&ver, "version", false, "stampa la versione del programma")
+	downloadCommand.BoolVar(&ver, "V", false, "stampa la versione del programma")
+	searchCommand.BoolVar(&ver, "version", false, "stampa la versione del programma")
+	searchCommand.BoolVar(&ver, "V", false, "stampa la versione del programma")
 	var link string
 	downloadCommand.StringVar(&link, "url", "", "link alla pagina dell'anime")
 	downloadCommand.StringVar(&link, "u", "", "link alla pagina dell'anime")
@@ -105,12 +105,15 @@ Flag per il sottocomando "search":
 	downloadCommand.IntVar(&workers, "w", 3, "quanti worker da utilizzare")
 	var search string
 	searchCommand.StringVar(&search, "search", "", "nome dell'anime da cercare")
-	searchCommand.StringVar(&search, "s", "3", "nome dell'anime da cercare")
+	searchCommand.StringVar(&search, "s", "", "nome dell'anime da cercare")
+	var base string
+	searchCommand.StringVar(&base, "base-url", "", "url alla home di animesaturn")
+	searchCommand.StringVar(&base, "b", "", "url alla home di animesaturn")
 
 	flag.Parse()
 
-	if version {
-		log.Printf("AnimesaturnDownloaderGo %s", VERSION)
+	if ver {
+		log.Printf("AnimesaturnDownloaderGo %s", version.Get())
 		return
 	}
 	if len(os.Args) < 2 {
@@ -121,8 +124,8 @@ Flag per il sottocomando "search":
 	switch os.Args[1] {
 	case "download":
 		downloadCommand.Parse(os.Args[2:])
-		if version {
-			log.Printf("AnimesaturnDownloaderGo %s", VERSION)
+		if ver {
+			log.Printf("AnimesaturnDownloaderGo %s", version.Get())
 			return
 		}
 		link = strings.TrimSpace(link)
@@ -166,14 +169,17 @@ Flag per il sottocomando "search":
 		log.Infof("Tempo inpiegato: %s\n", time.Since(startTime).String())
 	case "search":
 		searchCommand.Parse(os.Args[2:])
-		if version {
-			log.Printf("AnimesaturnDownloaderGo %s", VERSION)
+		if ver {
+			log.Printf("AnimesaturnDownloaderGo %s", version.Get())
 			return
 		}
 		search = strings.TrimSpace(search)
 		if search == "" {
 			log.Fatal("Il flag --search (-s) è obbligatorio")
 			return
+		}
+		if base != "" {
+			helper.BASEURL = strings.Trim(base, "/")
 		}
 		runSearch(search)
 	default:

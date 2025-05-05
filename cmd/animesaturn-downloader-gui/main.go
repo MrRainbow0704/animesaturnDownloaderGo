@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/MrRainbow0704/animesaturnDownloaderGo/frontend"
 	log "github.com/MrRainbow0704/animesaturnDownloaderGo/internal/logger"
+	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/version"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -10,20 +11,17 @@ import (
 )
 
 func main() {
-	app := &App{}
+	app := &App{Version: version.Get()}
 	opts := &options.App{
-		Title:  "Animesaturn Downlaoder",
-		Width:  1024,
-		Height: 768,
-		AssetServer: &assetserver.Options{
-			Assets: frontend.Assets,
-		},
+		Title:            "Animesaturn Downlaoder " + app.Version,
+		Width:            1280,
+		Height:           720,
+		AssetServer:      &assetserver.Options{Assets: frontend.Assets},
 		BackgroundColour: &options.RGBA{R: 18, G: 22, B: 25, A: 1},
 		OnStartup:        app.startup,
-		Bind: []any{
-			app,
-		},
-		Logger: &log.AppLogger{},
+		Bind:             []any{app},
+		Logger:           &log.AppLogger{},
+		DisableResize:    true,
 	}
 
 	if err := wails.Run(opts); err != nil {

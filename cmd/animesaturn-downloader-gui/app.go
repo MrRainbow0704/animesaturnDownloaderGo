@@ -14,8 +14,9 @@ import (
 
 // App struct
 type App struct {
-	ctx    context.Context
-	client *http.Client
+	Version string
+	ctx     context.Context
+	client  *http.Client
 }
 
 // startup is called when the app starts. The context is saved
@@ -143,4 +144,18 @@ func (a *App) DownloadAnime(link string, primo int, ultimo int, filename string,
 
 	wails.LogPrint(a.ctx, "Download completati.\n")
 	return true
+}
+
+func (a *App) GetDefaultAnime() []helper.Anime {
+	animes, err := helper.GetDefaultAnime(a.client)
+	if err != nil {
+		wails.LogErrorf(a.ctx, "Errore durante la ricerca: %s\n", err)
+		return []helper.Anime{}
+	}
+	wails.LogInfof(a.ctx, "Trovati %d anime\n", len(animes))
+	return animes
+}
+
+func SetBaseUrl(u string) {
+	helper.BASEURL = strings.Trim(u, "/")
 }

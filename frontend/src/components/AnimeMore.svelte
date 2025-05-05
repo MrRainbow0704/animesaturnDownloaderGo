@@ -7,7 +7,7 @@
 
 	let primo: number = 0;
 	let ultimo: number = anime.Info.EpisodeCount;
-	let filename: string = anime.Title.replace(/[<>:"/\\|?*]+/g,'');;
+	let filename: string = anime.Title.replace(/[<>:"/\\|?*]+/g, "");
 	let workers: number = 3;
 	let downloadStatus = writable("");
 	function download(): void {
@@ -18,11 +18,8 @@
 </script>
 
 <div class="more">
-	<!-- <header>
-		<img src={anime.Banner} alt="{anime.Title} banner" />
-	</header> -->
 	<aside>
-		<img src={anime.Poster} alt="{anime.Title} poster" />
+		<img src={anime.Info.Poster} alt="{anime.Title} poster" />
 	</aside>
 	<article>
 		<h1>{anime.Title}</h1>
@@ -32,7 +29,10 @@
 			<hr />
 			<li><b>Status:</b> {anime.Info.Status}</li>
 			<hr />
-			<li><b>Episodi:</b> {anime.Info.EpisodeCount}</li>
+			<li>
+				<b>Episodi:</b>
+				{!anime.Info.EpisodeCount ? "??" : anime.Info.EpisodeCount}
+			</li>
 			<hr />
 			<li>
 				<b>Tags:</b>
@@ -49,10 +49,14 @@
 		<hr />
 		<h2>Download</h2>
 		<form onsubmit={download}>
-			<label>
+			<label 
+					style="--text: '[{primo}-{ultimo}].mp4';">
 				Nome dei File scaricati:
-				<input type="text" name="filename" bind:value={filename} />
-				[{primo}-{ultimo}].mp4
+				<input
+					type="text"
+					name="filename"
+					bind:value={filename}
+				/>
 			</label>
 			<div class="input-container">
 				Episodi da scaricare.
@@ -101,7 +105,7 @@
 		padding-left: 1rem;
 	}
 	aside > img {
-		max-width: 100%;
+		width: 100%;
 	}
 	.more {
 		display: grid;
@@ -139,11 +143,19 @@
 	form > label:has(input[type="number"]) {
 		grid-template-columns: 15rem 5rem;
 	}
+	form > label:has(input[type="text"])::after {
+		content: var(--text);
+		text-wrap: nowrap;
+		display: inline-block;
+		position: relative;
+		right: 5rem;
+		top: 2px;
+	}
 	.input-container {
 		display: grid;
 		grid-template-columns: 15rem 10rem 10rem;
 	}
 	form > label:has(input[name="filename"]) {
-		grid-template-columns: 15rem auto 6rem;
+		grid-template-columns: 15rem auto 0;
 	}
 </style>

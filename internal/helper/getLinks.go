@@ -1,6 +1,7 @@
 package helper
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -11,6 +12,8 @@ import (
 
 	"github.com/dlclark/regexp2"
 )
+
+var BASEURL = "https://www.animesaturn.cx"
 
 type IndexedUrl struct {
 	Index int
@@ -23,21 +26,20 @@ type AnimeInfo struct {
 	Studio       string
 	Status       string
 	Plot         string
+	Poster       string
 }
 
 type Anime struct {
-	Info   AnimeInfo
-	Title  string
-	Url    string
-	Banner string // Immagine grande
-	Poster string // Immagine piccola
+	Info  AnimeInfo
+	Title string
+	Url   string
 }
 
 func GetEpisodeLinks(c *http.Client, u string) ([]string, error) {
 	req, _ := http.NewRequest("GET", u, nil)
 	res, err := c.Do(req)
 	if err != nil || res.StatusCode != 200 {
-		log.Errorf("La richiesta HTTP ha prodotto un errore: %s\n", err)
+		log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res.StatusCode)
 		return nil, err
 	}
 	doc, err := goquery.NewDocumentFromReader(res.Body)
@@ -64,7 +66,7 @@ func GetStreamLink(c *http.Client, u string, i int) (IndexedUrl, error) {
 	req, _ := http.NewRequest("GET", u, nil)
 	res, err := c.Do(req)
 	if err != nil || res.StatusCode != 200 {
-		log.Errorf("La richiesta HTTP ha prodotto un errore: %s\n", err)
+		log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res.StatusCode)
 		return IndexedUrl{}, err
 	}
 	doc, err := goquery.NewDocumentFromReader(res.Body)
@@ -86,7 +88,7 @@ func GetVideoLink(c *http.Client, u string, i int) (IndexedUrl, error) {
 	req, _ := http.NewRequest("GET", u, nil)
 	res, err := c.Do(req)
 	if err != nil || res.StatusCode != 200 {
-		log.Errorf("La richiesta HTTP ha prodotto un errore: %s\n", err)
+		log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res.StatusCode)
 		return IndexedUrl{}, err
 	}
 	doc, err := goquery.NewDocumentFromReader(res.Body)
@@ -114,12 +116,11 @@ func GetVideoLink(c *http.Client, u string, i int) (IndexedUrl, error) {
 }
 
 func GetSearchResults(c *http.Client, s string) ([]Anime, error) {
-	base := "https://www.animesaturn.cx/animelist?search=%s"
-	u := fmt.Sprintf(base, s)
+	u := fmt.Sprintf(BASEURL+"/animelist?search=%s", s)
 	req, _ := http.NewRequest("GET", u, nil)
 	res, err := c.Do(req)
 	if err != nil || res.StatusCode != 200 {
-		log.Errorf("La richiesta HTTP ha prodotto un errore: %s\n", err)
+		log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res.StatusCode)
 		return nil, err
 	}
 	doc, err := goquery.NewDocumentFromReader(res.Body)
@@ -135,23 +136,12 @@ func GetSearchResults(c *http.Client, s string) ([]Anime, error) {
 			log.Error("Errore durante il parsing del link.\n")
 			return
 		}
-		poster, ok := s.Find(".image-wrapper>img.locandina-archivio").Attr("src")
-		if !ok {
-			log.Error("Errore durante il parsing del poster.\n")
-			return
-		}
-		banner, ok := s.Find(".image-wrapper>img.copertina-archivio").Attr("src")
-		if !ok {
-			log.Error("Errore durante il parsing del banner.\n")
-			return
-		}
 		info, err := GetAnimeInfo(c, href)
 		if err != nil {
 			log.Error("Errore durante il parsing delle informazioni.\n")
 			return
 		}
-
-		a := Anime{Title: title, Url: href, Banner: banner, Poster: poster, Info: info}
+		a := Anime{Title: title, Url: href, Info: info}
 		anime = append(anime, a)
 	})
 	return anime, nil
@@ -161,7 +151,7 @@ func GetAnimeInfo(c *http.Client, u string) (AnimeInfo, error) {
 	req, _ := http.NewRequest("GET", u, nil)
 	res, err := c.Do(req)
 	if err != nil || res.StatusCode != 200 {
-		log.Errorf("La richiesta HTTP ha prodotto un errore: %s\n", err)
+		log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res.StatusCode)
 		return AnimeInfo{}, err
 	}
 	doc, err := goquery.NewDocumentFromReader(res.Body)
@@ -172,6 +162,7 @@ func GetAnimeInfo(c *http.Client, u string) (AnimeInfo, error) {
 	studioReg := regexp2.MustCompile(`(?<=Studio: )(.*)(?=\n)`, 0)
 	statoReg := regexp2.MustCompile(`(?<=Stato: )(.*)(?=\n)`, 0)
 	episodiReg := regexp2.MustCompile(`(?<=Episodi: )([\d?]*)(?=.*\n)`, 0)
+
 	stats := strings.TrimSpace(doc.Find(".margin-anime-page:nth-child(2)>:nth-child(2)").Text())
 	studio, err := studioReg.FindStringMatch(stats)
 	if err != nil {
@@ -188,7 +179,7 @@ func GetAnimeInfo(c *http.Client, u string) (AnimeInfo, error) {
 		log.Errorf("Errore durante il parsing del numero di episodi: %s\n", err)
 		return AnimeInfo{}, err
 	}
-	nEspsStr:= eps.Capture.String()
+	nEspsStr := eps.Capture.String()
 	nEps := 0
 	if !strings.Contains(nEspsStr, "?") {
 		nEps, err = strconv.Atoi(nEspsStr)
@@ -202,12 +193,50 @@ func GetAnimeInfo(c *http.Client, u string) (AnimeInfo, error) {
 		tags[i] = strings.TrimSpace(t)
 	}
 	plot := strings.TrimSpace(doc.Find("#full-trama").Text())
-
+	poster, ok := doc.Find(".cover-anime").Attr("src")
+	if !ok {
+		log.Errorf("Errore durante il parsing del poster.\n")
+		return AnimeInfo{}, errors.New("inpossibile trovare il poster dell'anime")
+	}
 	return AnimeInfo{
 		EpisodeCount: nEps,
 		Tags:         tags,
 		Studio:       studio.Capture.String(),
 		Status:       status.Capture.String(),
 		Plot:         plot,
+		Poster:       poster,
 	}, nil
+}
+
+func GetDefaultAnime(c *http.Client) ([]Anime, error) {
+	req, _ := http.NewRequest("GET", BASEURL, nil)
+	res, err := c.Do(req)
+	if err != nil || res.StatusCode != 200 {
+		log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res.StatusCode)
+		return nil, err
+	}
+	doc, err := goquery.NewDocumentFromReader(res.Body)
+	if err != nil {
+		log.Errorf("Errore durante il parsing della pagina: %s\n", err)
+		return nil, err
+	}
+	anime := []Anime{}
+	doc.Find(".carousel-caption>a").Each(func(i int, s *goquery.Selection) {
+		title := s.Text()
+		href, ok := s.Attr("href")
+		if !ok {
+			log.Error("Errore durante il parsing del link.\n")
+			return
+		}
+		href = BASEURL + href
+		info, err := GetAnimeInfo(c, href)
+		if err != nil {
+			log.Error("Errore durante il parsing delle informazioni.\n")
+			return
+		}
+
+		a := Anime{Title: title, Url: href, Info: info}
+		anime = append(anime, a)
+	})
+	return anime, nil
 }
