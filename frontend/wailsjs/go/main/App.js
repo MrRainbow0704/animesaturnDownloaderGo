@@ -6,10 +6,18 @@ export function DownloadAnime(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['main']['App']['DownloadAnime'](arg1, arg2, arg3, arg4, arg5);
 }
 
+export function GetBaseUrl() {
+  return window['go']['main']['App']['GetBaseUrl']();
+}
+
 export function GetDefaultAnime() {
   return window['go']['main']['App']['GetDefaultAnime']();
 }
 
 export function SearchAnime(arg1) {
   return window['go']['main']['App']['SearchAnime'](arg1);
+}
+
+export function SetBaseUrl(arg1) {
+  return window['go']['main']['App']['SetBaseUrl'](arg1);
 }

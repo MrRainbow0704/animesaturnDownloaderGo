@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { onMount } from "svelte";
+	import { writable } from "svelte/store";
 	import { SearchAnime, GetDefaultAnime } from "$wails/go/main/App.js";
 	import { BrowserOpenURL } from "$wails/runtime";
+	import type { helper } from "$wails/go/models";
 	import Anime from "$components/Anime.svelte";
 	import SpinningWheeel from "$components/SpinningWheeel.svelte";
-	import { writable } from "svelte/store";
-	import type { helper } from "$wails/go/models";
+	import ProgressBar from "$components/ProgressBar.svelte";
+	import Toast from "$components/Toast.svelte";
 
 	let search: string;
 	let mainText: string;
@@ -84,6 +86,8 @@
 			{/if}
 		</div>
 	</div>
+	<ProgressBar />
+	<Toast />
 </main>
 
 <style>

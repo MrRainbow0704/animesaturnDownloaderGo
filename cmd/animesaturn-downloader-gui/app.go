@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os/exec"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/helper"
 
@@ -39,10 +41,38 @@ func (a *App) SearchAnime(s string) []helper.Anime {
 }
 
 func (a *App) DownloadAnime(link string, primo int, ultimo int, filename string, workers int) bool {
-	path, err := wails.OpenDirectoryDialog(a.ctx, wails.OpenDialogOptions{})
+	done := make(chan bool)
+	defer func() { done <- true }()
+	go func() {
+		for {
+			select {
+			case <-done:
+				return
+			default:
+				wails.WindowExecJS(
+					a.ctx,
+					fmt.Sprintf(
+						"window.progressBarProgress = %d; window.progressBarTotal = %d",
+						helper.Progress,
+						helper.Total,
+					),
+				)
+				time.Sleep(500 * time.Millisecond)
+			}
+		}
+	}()
+	path, err := wails.OpenDirectoryDialog(
+		a.ctx,
+		wails.OpenDialogOptions{
+			Title:                "Scegli dove salvare i file:",
+			CanCreateDirectories: true,
+			ResolvesAliases:      true,
+		},
+	)
 	if err != nil {
 		return false
 	}
+	wails.WindowExecJS(a.ctx, "window.notifications.default(\"Iniziando il download...\", 3000);")
 
 	wails.LogInfo(a.ctx, "Cercando i link agli episodi...\n")
 	var episodi []string
@@ -156,6 +186,10 @@ func (a *App) GetDefaultAnime() []helper.Anime {
 	return animes
 }
 
-func SetBaseUrl(u string) {
+func (a *App) SetBaseUrl(u string) {
 	helper.BASEURL = strings.Trim(u, "/")
+}
+
+func (a *App) GetBaseUrl() string {
+	return helper.BASEURL
 }

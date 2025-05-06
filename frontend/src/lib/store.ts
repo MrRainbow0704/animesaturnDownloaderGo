@@ -1,4 +1,5 @@
-import { writable } from "svelte/store";
+import { writable, type Writable } from "svelte/store";
 
-export const isOpen = writable(false);
-export const id = writable("");
+export const isOpen: Writable<boolean> = writable(false);
+export const modalID: Writable<string> = writable("");
+export const downloading: Writable<boolean> = writable(false);

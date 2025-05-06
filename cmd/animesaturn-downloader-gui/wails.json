@@ -1,7 +1,7 @@
 {
   "$schema": "https://wails.io/schemas/config.v2.json",
-  "name": "animnesaturndownloader",
-  "outputfilename": "animnesaturndownloader",
+  "name": "AnimneSaturn Downloader",
+  "outputfilename": "animesaturn-downloader-gui",
   "build:dir": "../../build",
   "frontend:dir": "../../frontend",
   "frontend:install": "npm install",
@@ -9,7 +9,14 @@
   "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "auto",
   "author": {
-    "name": "MrRainbow0704",
+    "name": "Marco Simone",
     "email": "2007.marcosimone@gmail.com"
+  },
+  "info": {
+    "productName": "AnimeSaturn Downloader",
+    "companyName": "Marco Simone",
+    "productVersion": "0.1.0",
+    "copyright": "GNU General Public License v3.0",
+    "comments": "Una app per scaricare anime dal sito animesaturn"
   }
 }

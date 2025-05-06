@@ -12,15 +12,19 @@ import (
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
 
+var Progress int64
+var Total int64
+
 type PassThru struct {
 	io.Reader
-	Total int64
+	Progress int64
 }
 
 func (pt *PassThru) Read(p []byte) (int, error) {
 	n, err := pt.Reader.Read(p)
 	if err == nil {
-		pt.Total += int64(n)
+		pt.Progress += int64(n)
+		Progress += int64(n)
 	}
 
 	return n, err
@@ -44,20 +48,10 @@ func DownloadFile(c *http.Client, filepath string, url string) error {
 	defer resp.Body.Close()
 
 	src := &PassThru{Reader: resp.Body}
-	done := make(chan bool)
-	progress := make(chan int64)
-	go func() {
-	Loop:
-		for {
-			select {
-			case <-done:
-				log.Println("Done!")
-				break Loop
-			default:
-				progress <- src.Total
-				log.Printf("%s: %d/%d", url, src.Total, resp.ContentLength)
-			}
-		}
+	Total += resp.ContentLength
+	defer func() {
+		Total -= resp.ContentLength
+		Progress -= src.Progress
 	}()
 
 	// Write the body to file
@@ -66,7 +60,6 @@ func DownloadFile(c *http.Client, filepath string, url string) error {
 		log.Errorf("La scrittura del file `%s` ha prodotto un errore: %s\n", filepath, err)
 		return err
 	}
-	done <- true
 	log.Infof("Terminata la scrittura del file `%s`.\n", filepath)
 	return nil
 }

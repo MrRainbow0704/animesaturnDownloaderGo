@@ -1,21 +1,23 @@
 <script lang="ts">
-	import { id } from "$lib/store";
+	import { modalID } from "$lib/store";
 	import { getContext } from "svelte";
-	
+
 	const modalId: string = getContext("modalId");
-	const handleKeydown = (e: KeyboardEvent) => {
+	function handleKeydown(e: KeyboardEvent): void {
 		if (e.key === "Escape") {
 			e.preventDefault();
-			$id = "";
+			$modalID = "";
 		}
-	};
+	}
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
 <div>
-	<div class="modal" hidden={modalId !== $id}>
+	<div class="modal" hidden={modalId !== $modalID}>
 		<div class="content">
-			<button type="button" on:click={() => $id = ""}> &times; </button>
+			<button type="button" on:click={() => ($modalID = "")}>
+				&times;
+			</button>
 			<slot />
 		</div>
 	</div>
@@ -30,7 +32,7 @@
 	}
 	.modal {
 		position: fixed;
-		z-index: 9999;
+		z-index: 10;
 		left: 0;
 		top: 0;
 		width: 100%;

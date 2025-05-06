@@ -2,6 +2,8 @@
 	import type { helper } from "$wails/go/models";
 	import { DownloadAnime } from "$wails/go/main/App";
 	import { writable } from "svelte/store";
+	import { downloading } from "$lib/store";
+	import { notifications } from "$lib/notifications";
 
 	export let anime: helper.Anime;
 
@@ -11,8 +13,14 @@
 	let workers: number = 3;
 	let downloadStatus = writable("");
 	function download(): void {
-		DownloadAnime(anime.Url, primo, ultimo, filename, workers).then((ok) =>
-			ok ? downloadStatus.set("Fatto") : downloadStatus.set("Fallito")
+		downloading.set(true);
+		DownloadAnime(anime.Url, primo, ultimo, filename, workers).then(
+			(ok) => {
+				downloading.set(false);
+				ok
+				? notifications.success("Finito di scaricare i file!", 3000)
+				: notifications.error("Download fallito! :(", 3000)
+			}
 		);
 	}
 </script>
@@ -48,15 +56,15 @@
 		<p>{anime.Info.Plot}</p>
 		<hr />
 		<h2>Download</h2>
-		<form onsubmit={download}>
-			<label 
-					style="--text: '[{primo}-{ultimo}].mp4';">
+		<form
+			on:submit={(e) => {
+				e.preventDefault();
+				download();
+			}}
+		>
+			<label style="--text: '[{primo}-{ultimo}].mp4';">
 				Nome dei File scaricati:
-				<input
-					type="text"
-					name="filename"
-					bind:value={filename}
-				/>
+				<input type="text" name="filename" bind:value={filename} />
 			</label>
 			<div class="input-container">
 				Episodi da scaricare.
@@ -91,7 +99,7 @@
 					bind:value={workers}
 				/>
 			</label>
-			<button type="submit">Download</button>
+			<button disabled={$downloading} type="submit">Download</button>
 			<div>{$downloadStatus}</div>
 		</form>
 	</article>

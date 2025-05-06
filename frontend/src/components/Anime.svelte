@@ -25,6 +25,9 @@
 <style>
 	div {
 		background: transparent;
+		background-position: center;
+		background-repeat: no-repeat;
+		background-size: cover;
 		border: none;
 		color: #fff;
 		display: grid;

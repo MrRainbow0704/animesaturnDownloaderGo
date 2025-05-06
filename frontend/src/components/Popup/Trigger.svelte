@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { id } from "$lib/store";
+	import { modalID } from "$lib/store";
 	import { getContext } from "svelte";
-	
+
 	const modalId: string = getContext("modalId");
 </script>
 
-<button on:click={() => ($id = modalId)}>
+<button on:click={() => ($modalID = modalId)}>
 	<slot />
 </button>
 
