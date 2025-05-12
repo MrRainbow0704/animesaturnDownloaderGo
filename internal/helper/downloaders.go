@@ -15,21 +15,6 @@ import (
 var Progress int64
 var Total int64
 
-type PassThru struct {
-	io.Reader
-	Progress int64
-}
-
-func (pt *PassThru) Read(p []byte) (int, error) {
-	n, err := pt.Reader.Read(p)
-	if err == nil {
-		pt.Progress += int64(n)
-		Progress += int64(n)
-	}
-
-	return n, err
-}
-
 func DownloadFile(c *http.Client, filepath string, url string) error {
 	// Create the file
 	out, err := os.Create(filepath)

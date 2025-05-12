@@ -6,7 +6,8 @@ export namespace helper {
 	    Studio: string;
 	    Status: string;
 	    Plot: string;
-	    Poster: string;
+	    FirstEpisode: number;
+	    LastEpisode: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new AnimeInfo(source);
@@ -19,13 +20,15 @@ export namespace helper {
 	        this.Studio = source["Studio"];
 	        this.Status = source["Status"];
 	        this.Plot = source["Plot"];
-	        this.Poster = source["Poster"];
+	        this.FirstEpisode = source["FirstEpisode"];
+	        this.LastEpisode = source["LastEpisode"];
 	    }
 	}
 	export class Anime {
 	    Info: AnimeInfo;
 	    Title: string;
 	    Url: string;
+	    Poster: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Anime(source);
@@ -36,6 +39,7 @@ export namespace helper {
 	        this.Info = this.convertValues(source["Info"], AnimeInfo);
 	        this.Title = source["Title"];
 	        this.Url = source["Url"];
+	        this.Poster = source["Poster"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

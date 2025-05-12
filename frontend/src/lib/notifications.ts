@@ -8,7 +8,7 @@ type NotificationType = {
 };
 
 function createNotificationStore() {
-	const _notifications: Writable<Array<NotificationType>> = writable([]);
+	const _notifications: Writable<NotificationType[]> = writable([]);
 
 	function send(message: string, type: string = "default", timeout: number) {
 		_notifications.update((state) => {
@@ -16,7 +16,7 @@ function createNotificationStore() {
 		});
 	}
 
-	const notifications: Readable<Array<NotificationType>> = derived(
+	const notifications: Readable<NotificationType[]> = derived(
 		_notifications,
 		($_notifications, set) => {
 			set($_notifications);
@@ -41,6 +41,7 @@ function createNotificationStore() {
 		default: (msg: string, timeout: number) =>
 			send(msg, "default", timeout),
 		error: (msg: string, timeout: number) => send(msg, "error", timeout),
+		fatal: (msg: string, timeout: number) => send(msg, "fatal", timeout),
 		info: (msg: string, timeout: number) => send(msg, "info", timeout),
 		success: (msg: string, timeout: number) =>
 			send(msg, "success", timeout),
@@ -54,4 +55,4 @@ function id() {
 export const notifications = createNotificationStore();
 
 //@ts-expect-error
-window.notifications = notifications
+window.notifications = notifications;

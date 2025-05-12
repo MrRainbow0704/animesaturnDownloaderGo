@@ -8,6 +8,8 @@ export function GetBaseUrl():Promise<string>;
 
 export function GetDefaultAnime():Promise<Array<helper.Anime>>;
 
-export function SearchAnime(arg1:string):Promise<Array<helper.Anime>>;
+export function GetPageNumber(arg1:string):Promise<number>;
+
+export function SearchAnime(arg1:string,arg2:number):Promise<Array<helper.Anime>>;
 
 export function SetBaseUrl(arg1:string):Promise<void>;

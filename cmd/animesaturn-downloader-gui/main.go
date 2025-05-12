@@ -10,6 +10,8 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 )
 
+var appLogger = &log.AppLogger{}
+
 func main() {
 	app := &App{Version: version.Get()}
 	opts := &options.App{
@@ -20,7 +22,7 @@ func main() {
 		BackgroundColour: &options.RGBA{R: 18, G: 22, B: 25, A: 1},
 		OnStartup:        app.startup,
 		Bind:             []any{app},
-		Logger:           &log.AppLogger{},
+		Logger:           appLogger,
 		DisableResize:    true,
 	}
 

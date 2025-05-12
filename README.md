@@ -9,7 +9,7 @@ foo@bar:~/animesaturnDownloaderGo$ ./scripts/build.sh
 ```
 - Per Windows:
 ```powershell
-PS ~/animesaturnDownloaderGo> .\scripts\build.ps1
+PS ~\animesaturnDownloaderGo> .\scripts\build.ps1
 ```
 
 ## Utilizzo
@@ -21,7 +21,7 @@ foo@bar:~/animesaturnDownloaderGo$ ./bin/animesaturn-downloader -h
 ```
 - Per Windows:
 ```powershell
-PS ~/animesaturnDownloaderGo> .\bin\animesaturn-downloader.exe -h
+PS ~\animesaturnDownloaderGo> .\bin\animesaturn-downloader.exe -h
 ```
 Che produrrà un output simile a questo:
 ```console
@@ -50,7 +50,7 @@ foo@bar:~/animesaturnDownloaderGo$ ./bin/animesaturn-downloader -u https://your-
 ```
 - Per Windows:
 ```powershell
-PS ~/animesaturnDownloaderGo> .\bin\animesaturn-downloader.exe -u https://your-url-here/anime -f 1 -l 12 -d ./my-anime -n MyAnime_ -w 3
+PS ~\animesaturnDownloaderGo> .\bin\animesaturn-downloader.exe -u https://your-url-here/anime -f 1 -l 12 -d ./my-anime -n MyAnime_ -w 3
 ```
 Questo comando invoca l'eseguibile con i seguenti parametri:
 - url: https[]()://your-url-here/anime

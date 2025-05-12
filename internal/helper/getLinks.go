@@ -1,7 +1,6 @@
 package helper
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -12,28 +11,6 @@ import (
 
 	"github.com/dlclark/regexp2"
 )
-
-var BASEURL = "https://www.animesaturn.cx"
-
-type IndexedUrl struct {
-	Index int
-	Url   string
-}
-
-type AnimeInfo struct {
-	EpisodeCount int
-	Tags         []string
-	Studio       string
-	Status       string
-	Plot         string
-	Poster       string
-}
-
-type Anime struct {
-	Info  AnimeInfo
-	Title string
-	Url   string
-}
 
 func GetEpisodeLinks(c *http.Client, u string) ([]string, error) {
 	req, _ := http.NewRequest("GET", u, nil)
@@ -115,8 +92,25 @@ func GetVideoLink(c *http.Client, u string, i int) (IndexedUrl, error) {
 	return IndexedUrl{i, link}, nil
 }
 
-func GetSearchResults(c *http.Client, s string) ([]Anime, error) {
-	u := fmt.Sprintf(BASEURL+"/animelist?search=%s", s)
+func GetSearchResults(c *http.Client, s string, p uint) ([]Anime, error) {
+	if p == 0 {
+		pagine, err := GetPageNumber(c, s)
+		if err != nil {
+			log.Errorf("Errore durante l'ottenimento delle pagine: %s", err)
+			return nil, err
+		}
+		var anime []Anime
+		for i := range pagine {
+			a, err := GetSearchResults(c, s, uint(i+1))
+			if err != nil {
+				return nil, err
+			}
+			anime = append(anime, a...)
+		}
+		return anime, nil
+	}
+
+	u := fmt.Sprintf(BaseURL+"/animelist?search=%s&page=%s", s, p)
 	req, _ := http.NewRequest("GET", u, nil)
 	res, err := c.Do(req)
 	if err != nil || res.StatusCode != 200 {
@@ -136,12 +130,17 @@ func GetSearchResults(c *http.Client, s string) ([]Anime, error) {
 			log.Error("Errore durante il parsing del link.\n")
 			return
 		}
+		poster, ok := s.Find(".locandina-archivio").Attr("src")
+		if !ok {
+			log.Errorf("Errore durante il parsing del poster.\n")
+			return
+		}
 		info, err := GetAnimeInfo(c, href)
 		if err != nil {
 			log.Error("Errore durante il parsing delle informazioni.\n")
 			return
 		}
-		a := Anime{Title: title, Url: href, Info: info}
+		a := Anime{Title: title, Url: href, Poster: poster, Info: info}
 		anime = append(anime, a)
 	})
 	return anime, nil
@@ -188,15 +187,48 @@ func GetAnimeInfo(c *http.Client, u string) (AnimeInfo, error) {
 			return AnimeInfo{}, err
 		}
 	}
-	tags := strings.Split(strings.TrimSpace(doc.Find(".margin-anime-page:nth-child(2)>:nth-child(3)").Text()), "\n")
+	tags := strings.Split(
+		strings.TrimSpace(doc.Find(".margin-anime-page:nth-child(2)>:nth-child(3)").Text()),
+		"\n",
+	)
 	for i, t := range tags {
 		tags[i] = strings.TrimSpace(t)
 	}
 	plot := strings.TrimSpace(doc.Find("#full-trama").Text())
-	poster, ok := doc.Find(".cover-anime").Attr("src")
-	if !ok {
-		log.Errorf("Errore durante il parsing del poster.\n")
-		return AnimeInfo{}, errors.New("inpossibile trovare il poster dell'anime")
+
+	var first, last int
+	if epBtns := doc.Find("#resultsxd>ul"); epBtns.Length() > 0 {
+		first, err = strconv.Atoi(strings.TrimSpace(
+			strings.Split(epBtns.Find("li>:first-child").Text(), "-")[0],
+		))
+		if err != nil {
+			log.Errorf("Errore durante la conversione del primo episodio: %s\n", err)
+			return AnimeInfo{}, err
+		}
+		last, err = strconv.Atoi(strings.TrimSpace(
+			strings.Split(epBtns.Find("li>:last-child").Text(), "-")[1],
+		))
+		if err != nil {
+			log.Errorf("Errore durante la conversione dell'ultimo episodio: %s\n", err)
+			return AnimeInfo{}, err
+		}
+	} else {
+		first, err = strconv.Atoi(strings.TrimSpace(strings.Split(
+			strings.TrimSpace(doc.Find("#resultsxd>div>div>div:first-child").Text()),
+			" ",
+		)[1]))
+		if err != nil {
+			log.Errorf("Errore durante la conversione del primo episodio: %s\n", err)
+			return AnimeInfo{}, err
+		}
+		last, err = strconv.Atoi(strings.TrimSpace(strings.Split(
+			strings.TrimSpace(doc.Find("#resultsxd>div>div>div:last-child").Text()),
+			" ",
+		)[1]))
+		if err != nil {
+			log.Errorf("Errore durante la conversione dell'ultimo episodio: %s\n", err)
+			return AnimeInfo{}, err
+		}
 	}
 	return AnimeInfo{
 		EpisodeCount: nEps,
@@ -204,12 +236,13 @@ func GetAnimeInfo(c *http.Client, u string) (AnimeInfo, error) {
 		Studio:       studio.Capture.String(),
 		Status:       status.Capture.String(),
 		Plot:         plot,
-		Poster:       poster,
+		FirstEpisode: first,
+		LastEpisode:  last,
 	}, nil
 }
 
 func GetDefaultAnime(c *http.Client) ([]Anime, error) {
-	req, _ := http.NewRequest("GET", BASEURL, nil)
+	req, _ := http.NewRequest("GET", BaseURL, nil)
 	res, err := c.Do(req)
 	if err != nil || res.StatusCode != 200 {
 		log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res.StatusCode)
@@ -228,15 +261,55 @@ func GetDefaultAnime(c *http.Client) ([]Anime, error) {
 			log.Error("Errore durante il parsing del link.\n")
 			return
 		}
-		href = BASEURL + href
+		href = BaseURL + href
+		req1, _ := http.NewRequest("GET", href, nil)
+		res1, err := c.Do(req1)
+		if err != nil || res1.StatusCode != 200 {
+			log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res.StatusCode)
+			return
+		}
+		doc1, err := goquery.NewDocumentFromReader(res1.Body)
+		if err != nil {
+			log.Errorf("Errore durante il parsing della pagina: %s\n", err)
+			return
+		}
+		poster, ok := doc1.Find(".cover-anime").Attr("src")
+		if !ok {
+			log.Errorf("Errore durante il parsing del poster.\n")
+			return
+		}
+
 		info, err := GetAnimeInfo(c, href)
 		if err != nil {
 			log.Error("Errore durante il parsing delle informazioni.\n")
 			return
 		}
 
-		a := Anime{Title: title, Url: href, Info: info}
+		a := Anime{Title: title, Url: href, Info: info, Poster: poster}
 		anime = append(anime, a)
 	})
 	return anime, nil
+}
+
+func GetPageNumber(c *http.Client, s string) (uint, error) {
+	u := fmt.Sprintf(BaseURL+"/animelist?search=%s", s)
+	req, _ := http.NewRequest("GET", u, nil)
+	res, err := c.Do(req)
+	if err != nil || res.StatusCode != 200 {
+		log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res.StatusCode)
+		return 0, err
+	}
+	doc, err := goquery.NewDocumentFromReader(res.Body)
+	if err != nil {
+		log.Errorf("Errore durante il parsing della pagina: %s\n", err)
+		return 0, err
+	}
+	var pagine int
+	text := doc.Find("#pagination>li.page-item.last").Text()
+	pagine, err = strconv.Atoi(text)
+	if err != nil {
+		log.Infoln("Non dovresti usare il valore p=0 se non ci sono altre pagine.")
+		return 1, nil
+	}
+	return uint(pagine), nil
 }

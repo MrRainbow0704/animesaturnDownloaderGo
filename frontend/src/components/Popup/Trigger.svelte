@@ -1,22 +1,23 @@
 <script lang="ts">
-	import { modalID } from "$lib/store";
-	import { getContext } from "svelte";
+import { modalID } from "$lib/store";
+import { getContext, type Snippet } from "svelte";
 
-	const modalId: string = getContext("modalId");
+const modalId: string = getContext("modalId");
+let { children }: { children?: Snippet } = $props();
 </script>
 
-<button on:click={() => ($modalID = modalId)}>
-	<slot />
+<button aria-haspopup="dialog" onclick={() => ($modalID = modalId)}>
+	{@render children?.()}
 </button>
 
 <style>
-	button {
-		background: transparent;
-		border: none;
-	}
-	button:hover {
-		color: #fff;
-		cursor: pointer;
-		background-color: var(--secondary);
-	}
+button {
+	background: transparent;
+	border: none;
+}
+button:hover {
+	color: #fff;
+	cursor: pointer;
+	background-color: var(--secondary);
+}
 </style>

@@ -67,6 +67,7 @@ Utilizzo: animesaturn-downloader search -s <search>
 
 Flag per il sottocomando "search":
   -s, --search <search>		nome dell'anime da cercare		[obbligatorio]
+  -p, --page <numero>		pagina da cercare. 0 => tutte		[default: 0]
   -b, --base-url <url>		url alla home di animesaturn		[obbligatorio]
 `)
 	}
@@ -109,6 +110,9 @@ Flag per il sottocomando "search":
 	var base string
 	searchCommand.StringVar(&base, "base-url", "", "url alla home di animesaturn")
 	searchCommand.StringVar(&base, "b", "", "url alla home di animesaturn")
+	var page uint
+	searchCommand.UintVar(&page, "page", 0, "pagina da cercare")
+	searchCommand.UintVar(&page, "p", 0, "pagina da cercare")
 
 	flag.Parse()
 
@@ -179,9 +183,9 @@ Flag per il sottocomando "search":
 			return
 		}
 		if base != "" {
-			helper.BASEURL = strings.Trim(base, "/")
+			helper.BaseURL = strings.Trim(base, "/")
 		}
-		runSearch(search)
+		runSearch(search, page)
 	default:
 		log.Fatalf("Sottocomando `%s` non riconosciuto.\n", os.Args[1])
 	}
@@ -292,14 +296,14 @@ func runDownload(link string, primo int, ultimo int, path string, filename strin
 	log.Println("Download completati.")
 }
 
-func runSearch(search string) {
+func runSearch(search string, page uint) {
 	log.Infoln("Inizializzando la sessione...")
 	client := helper.NewClient()
 	log.Infoln("Sessione creata!")
 
 	log.Infoln("Cercando gli anime...")
 	var anime []helper.Anime
-	if a, err := helper.GetSearchResults(client, search); err == nil {
+	if a, err := helper.GetSearchResults(client, search, page); err == nil {
 		anime = a
 	} else {
 		log.Fatalf("Errore nello scraping dei link agli anime: %s\n", err)

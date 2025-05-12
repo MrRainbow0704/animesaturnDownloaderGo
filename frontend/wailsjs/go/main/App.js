@@ -14,8 +14,12 @@ export function GetDefaultAnime() {
   return window['go']['main']['App']['GetDefaultAnime']();
 }
 
-export function SearchAnime(arg1) {
-  return window['go']['main']['App']['SearchAnime'](arg1);
+export function GetPageNumber(arg1) {
+  return window['go']['main']['App']['GetPageNumber'](arg1);
+}
+
+export function SearchAnime(arg1, arg2) {
+  return window['go']['main']['App']['SearchAnime'](arg1, arg2);
 }
 
 export function SetBaseUrl(arg1) {

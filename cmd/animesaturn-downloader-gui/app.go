@@ -9,7 +9,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/MrRainbow0704/animesaturnDownloaderGo/config"
 	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/helper"
+	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/logger"
 
 	wails "github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -25,13 +27,20 @@ type App struct {
 // so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	appLogger.SetContext(&ctx)
+	logger.Verbose = config.Verbose()
+	helper.BaseURL = config.BaseURL()
+
 	wails.LogInfo(a.ctx, "Inizializzando la sessione...\n")
 	a.client = helper.NewClient()
 	wails.LogInfo(a.ctx, "Sessione creata!\n")
 }
 
-func (a *App) SearchAnime(s string) []helper.Anime {
-	animes, err := helper.GetSearchResults(a.client, s)
+func (a *App) SearchAnime(s string, p uint) []helper.Anime {
+	if p <= 0 {
+		wails.LogErrorf(a.ctx, "Pagina non valida: %d\n", p)
+	}
+	animes, err := helper.GetSearchResults(a.client, s, p)
 	if err != nil {
 		wails.LogErrorf(a.ctx, "Errore durante la ricerca: %s\n", err)
 		return []helper.Anime{}
@@ -187,9 +196,14 @@ func (a *App) GetDefaultAnime() []helper.Anime {
 }
 
 func (a *App) SetBaseUrl(u string) {
-	helper.BASEURL = strings.Trim(u, "/")
+	helper.BaseURL = strings.Trim(u, "/")
 }
 
 func (a *App) GetBaseUrl() string {
-	return helper.BASEURL
+	return helper.BaseURL
+}
+
+func (a *App) GetPageNumber(s string) uint {
+	p, _ := helper.GetPageNumber(a.client, s)
+	return p
 }

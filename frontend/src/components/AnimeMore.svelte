@@ -1,33 +1,38 @@
 <script lang="ts">
-	import type { helper } from "$wails/go/models";
-	import { DownloadAnime } from "$wails/go/main/App";
-	import { writable } from "svelte/store";
-	import { downloading } from "$lib/store";
-	import { notifications } from "$lib/notifications";
+import type { helper } from "$wails/go/models";
+import { DownloadAnime } from "$wails/go/main/App";
+import { downloading } from "$lib/store";
+import { notifications } from "$lib/notifications";
 
-	export let anime: helper.Anime;
+let { anime }: { anime: helper.Anime } = $props();
 
-	let primo: number = 0;
-	let ultimo: number = anime.Info.EpisodeCount;
-	let filename: string = anime.Title.replace(/[<>:"/\\|?*]+/g, "");
-	let workers: number = 3;
-	let downloadStatus = writable("");
-	function download(): void {
-		downloading.set(true);
-		DownloadAnime(anime.Url, primo, ultimo, filename, workers).then(
-			(ok) => {
-				downloading.set(false);
-				ok
-				? notifications.success("Finito di scaricare i file!", 3000)
-				: notifications.error("Download fallito! :(", 3000)
-			}
+let primo: number = $state(anime.Info.FirstEpisode);
+let ultimo: number = $state(anime.Info.LastEpisode);
+let filename: string = $state(anime.Title.replace(/[<>:"/\\|?*]+/g, ""));
+let workers: number = $state(3);
+let downloadStatus = $state("");
+console.log(anime);
+function download(): void {
+	if (primo > ultimo) {
+		notifications.error(
+			"Il primo episodio da scaricare non può essere prima dell'ultimo!",
+			3000
 		);
+		return;
 	}
+	downloading.set(true);
+	DownloadAnime(anime.Url, primo, ultimo, filename, workers).then((ok) => {
+		downloading.set(false);
+		ok
+			? notifications.success("Finito di scaricare i file!", 3000)
+			: notifications.error("Download fallito! :(", 3000);
+	});
+}
 </script>
 
 <div class="more">
-	<aside>
-		<img src={anime.Info.Poster} alt="{anime.Title} poster" />
+	<aside aria-hidden="true">
+		<img src={anime.Poster} alt="{anime.Title} poster" />
 	</aside>
 	<article>
 		<h1>{anime.Title}</h1>
@@ -57,7 +62,7 @@
 		<hr />
 		<h2>Download</h2>
 		<form
-			on:submit={(e) => {
+			onsubmit={(e) => {
 				e.preventDefault();
 				download();
 			}}
@@ -73,8 +78,8 @@
 					<input
 						type="number"
 						name="primo"
-						min="0"
-						max={anime.Info.EpisodeCount}
+						min={anime.Info.FirstEpisode}
+						max={anime.Info.LastEpisode}
 						bind:value={primo}
 					/>
 				</label>
@@ -83,8 +88,8 @@
 					<input
 						type="number"
 						name="ultimo"
-						min="0"
-						max={anime.Info.EpisodeCount}
+						min={anime.Info.FirstEpisode}
+						max={anime.Info.LastEpisode}
 						bind:value={ultimo}
 					/>
 				</label>
@@ -100,70 +105,70 @@
 				/>
 			</label>
 			<button disabled={$downloading} type="submit">Download</button>
-			<div>{$downloadStatus}</div>
+			<div>{downloadStatus}</div>
 		</form>
 	</article>
 </div>
 
 <style>
-	aside {
-		padding-right: 1rem;
-	}
-	article {
-		padding-left: 1rem;
-	}
-	aside > img {
-		width: 100%;
-	}
-	.more {
-		display: grid;
-		grid-template-columns: 30% 70%;
-	}
-	ul {
-		list-style: none;
-		padding-inline-start: 0;
-	}
-	ul.tags {
-		display: inline-block;
-	}
-	ul.tags > li {
-		display: inline-block;
-		background: #fff;
-		color: var(--primary);
-		padding: 0.25rem;
-		margin: 0 0.125rem;
-		border-radius: 4px;
-	}
-	ul > hr {
-		border-color: var(--tertiary);
-	}
-	h2 {
-		margin: 1rem 0 0.25rem 0;
-	}
-	p {
-		margin: 0;
-	}
-	form > label {
-		display: grid;
-		grid-template-columns: 15rem auto;
-		padding: 0.25rem 0;
-	}
-	form > label:has(input[type="number"]) {
-		grid-template-columns: 15rem 5rem;
-	}
-	form > label:has(input[type="text"])::after {
-		content: var(--text);
-		text-wrap: nowrap;
-		display: inline-block;
-		position: relative;
-		right: 5rem;
-		top: 2px;
-	}
-	.input-container {
-		display: grid;
-		grid-template-columns: 15rem 10rem 10rem;
-	}
-	form > label:has(input[name="filename"]) {
-		grid-template-columns: 15rem auto 0;
-	}
+aside {
+	padding-right: 1rem;
+}
+article {
+	padding-left: 1rem;
+}
+aside > img {
+	width: 100%;
+}
+.more {
+	display: grid;
+	grid-template-columns: 30% 70%;
+}
+ul {
+	list-style: none;
+	padding-inline-start: 0;
+}
+ul.tags {
+	display: inline-block;
+}
+ul.tags > li {
+	display: inline-block;
+	background: #fff;
+	color: var(--primary);
+	padding: 0.25rem;
+	margin: 0 0.125rem;
+	border-radius: 4px;
+}
+ul > hr {
+	border-color: var(--tertiary);
+}
+h2 {
+	margin: 1rem 0 0.25rem 0;
+}
+p {
+	margin: 0;
+}
+form > label {
+	display: grid;
+	grid-template-columns: 15rem auto;
+	padding: 0.25rem 0;
+}
+form > label:has(input[type="number"]) {
+	grid-template-columns: 15rem 5rem;
+}
+form > label:has(input[type="text"])::after {
+	content: var(--text);
+	text-wrap: nowrap;
+	display: inline-block;
+	position: relative;
+	right: 5rem;
+	top: 2px;
+}
+.input-container {
+	display: grid;
+	grid-template-columns: 15rem 10rem 10rem;
+}
+form > label:has(input[name="filename"]) {
+	grid-template-columns: 15rem auto 0;
+}
 </style>

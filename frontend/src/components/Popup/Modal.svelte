@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { setContext } from "svelte";
+import { setContext, type Snippet } from "svelte";
 
-	export let modalId: string;
-	setContext("modalId", modalId);
+let { modalId, children }: { modalId: string; children?: Snippet } = $props();
+
+setContext("modalId", modalId);
 </script>
 
-<slot />
+{@render children?.()}
