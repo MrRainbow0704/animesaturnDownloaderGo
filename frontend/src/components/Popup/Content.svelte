@@ -46,7 +46,6 @@ dialog {
 }
 .content {
 	position: relative;
-	overflow-y: hidden;
 	background: transparent;
 	background-color: var(--primary);
 	padding: 2rem;

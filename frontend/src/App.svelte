@@ -4,7 +4,7 @@ import {
 	SearchAnime,
 	GetDefaultAnime,
 	GetPageNumber,
-} from "$wails/go/main/App.js";
+} from "$wails/go/main/App";
 import { BrowserOpenURL } from "$wails/runtime";
 import type { helper } from "$wails/go/models";
 import Anime from "$components/Anime.svelte";
@@ -20,6 +20,7 @@ let anime: helper.Anime[] = $state([]);
 let pages: number = $state(0);
 let page: number = $state(1);
 function defaultSearch(): void {
+	pages = 0;
 	mainText = "Anime in evidenza";
 	load = true;
 	enableSearch = false;
@@ -29,20 +30,24 @@ function defaultSearch(): void {
 		enableSearch = true;
 	});
 }
-function doSearch(): void {
+function doSearch({ noReset = false }: { noReset?: boolean } = {}): void {
 	if (!search) {
 		return defaultSearch();
 	}
 	mainText = `Risultati della ricerca "${search}"`;
 	load = true;
 	enableSearch = false;
-	GetPageNumber(search).then((result) => {
-		pages = result;
-	});
 	SearchAnime(search, page).then((result) => {
 		anime = result;
 		load = false;
 		enableSearch = true;
+	});
+	GetPageNumber(search).then((result) => {
+		pages = result;
+		if (noReset === false) {
+			console.log("Changing page")
+			page = 1;
+		}
 	});
 }
 
@@ -60,53 +65,60 @@ onMount(defaultSearch);
 				onclick={(e) => {
 					e.preventDefault();
 					BrowserOpenURL((e.target! as HTMLAnchorElement).href);
-				}}>Marco Simone</a
-			>
+				}}>Marco Simone</a>
 		</p>
 	</header>
 	<form
 		onsubmit={(e) => {
 			e.preventDefault();
 			doSearch();
-		}}
-	>
+		}}>
 		<input
-			autocomplete="off"
 			bind:value={search}
+			required
+			aria-required="true"
+			autocomplete="off"
+			spellcheck="false"
 			class="input"
 			id="name"
 			type="text"
-			placeholder="Cerca un'anime da scaricare"
-		/>
+			placeholder="Cerca un'anime da scaricare" />
 		<button type="submit" disabled={!enableSearch}>Cerca</button>
 	</form>
-	<div id="wrapper">
+	<div class="wrapper">
 		<h2>{mainText}</h2>
-		<div id="result">
+		<div class="wrapper">
 			{#if load}
 				<SpinningWheeel />
 			{:else if anime.length}
-				{#each anime as a}
-					<Anime anime={a} />
-				{/each}
-				<nav>
-					{#each { length: pages } as _, i}
-						<li>
-							<button
-								type="button"
-								disabled={i == pages}
-								aria-current={i == pages ? "page" : undefined}
-								aria-disabled={i == pages ? "true" : "false"}
-								onclick={(e) => {
-									e.preventDefault();
-									page = i;
-									doSearch();
-								}}
-							>
-								{i}
-							</button>
-						</li>
+				<div id="result">
+					{#each anime as a}
+						<Anime anime={a} />
 					{/each}
+				</div>
+				<nav>
+					<ul>
+						{#each { length: pages } as _, i}
+							<li>
+								<button
+									type="button"
+									disabled={i + 1 === page}
+									aria-current={i + 1 === page
+										? "page"
+										: undefined}
+									aria-disabled={i + 1 === page
+										? "true"
+										: "false"}
+									onclick={(e) => {
+										e.preventDefault();
+										page = i + 1;
+										doSearch({ noReset: false });
+									}}>
+									{i + 1}
+								</button>
+							</li>
+						{/each}
+					</ul>
 				</nav>
 			{:else}
 				<p>Nessun risultato trovato</p>
@@ -144,7 +156,7 @@ input {
 	padding: 0.5rem;
 	width: 60%;
 }
-#wrapper {
+.wrapper {
 	display: flex;
 	flex-wrap: nowrap;
 	flex-direction: column;
@@ -156,7 +168,6 @@ input {
 	display: flex;
 	flex-wrap: wrap;
 	justify-content: center;
-	height: 100%;
 	width: 100%;
 }
 main {
@@ -165,5 +176,21 @@ main {
 	align-items: center;
 	width: 100%;
 	height: 100%;
+}
+nav {
+	width: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+ul {
+	display: flex;
+	direction: row;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	list-style: none;
+	padding: 0;
+	max-width: 80%;
 }
 </style>

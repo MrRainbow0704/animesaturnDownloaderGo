@@ -25,6 +25,8 @@ go.work.sum
 # env file
 .env
 
+# configs
+config.json
 # wails 
 node_modules
 frontend/dist

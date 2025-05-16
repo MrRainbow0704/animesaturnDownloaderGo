@@ -6,7 +6,11 @@ const modalId: string = getContext("modalId");
 let { children }: { children?: Snippet } = $props();
 </script>
 
-<button aria-haspopup="dialog" onclick={() => ($modalID = modalId)}>
+<button
+	aria-haspopup="dialog"
+	onclick={() => {
+		$modalID = modalId;
+	}}>
 	{@render children?.()}
 </button>
 

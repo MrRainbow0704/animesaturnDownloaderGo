@@ -41,13 +41,16 @@ button:active {
 ::-webkit-scrollbar {
 	width: 4px;
 }
+
 ::-webkit-scrollbar-track-piece {
 	background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
 	background: var(--tertiary);
 	border-radius: 4px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
 	background: var(--tertiary);
 }
@@ -59,7 +62,8 @@ img {
 	-o-user-drag: none;
 	user-select: none;
 }
-input {
+
+input, select {
 	background: var(--secondary);
 	color: #fff;
 	border: 1px #2e3438;

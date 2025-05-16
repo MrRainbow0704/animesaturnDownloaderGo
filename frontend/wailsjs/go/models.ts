@@ -2,12 +2,12 @@ export namespace helper {
 	
 	export class AnimeInfo {
 	    EpisodeCount: number;
+	    Is18plus: boolean;
 	    Tags: string[];
 	    Studio: string;
 	    Status: string;
 	    Plot: string;
-	    FirstEpisode: number;
-	    LastEpisode: number;
+	    EpisodesList: string[];
 	
 	    static createFrom(source: any = {}) {
 	        return new AnimeInfo(source);
@@ -16,12 +16,12 @@ export namespace helper {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.EpisodeCount = source["EpisodeCount"];
+	        this.Is18plus = source["Is18plus"];
 	        this.Tags = source["Tags"];
 	        this.Studio = source["Studio"];
 	        this.Status = source["Status"];
 	        this.Plot = source["Plot"];
-	        this.FirstEpisode = source["FirstEpisode"];
-	        this.LastEpisode = source["LastEpisode"];
+	        this.EpisodesList = source["EpisodesList"];
 	    }
 	}
 	export class Anime {

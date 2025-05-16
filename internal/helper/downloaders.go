@@ -3,79 +3,141 @@ package helper
 import (
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	log "github.com/MrRainbow0704/animesaturnDownloaderGo/internal/logger"
-	ffmpeg "github.com/u2takey/ffmpeg-go"
+	"github.com/etherlabsio/go-m3u8/m3u8"
 )
 
-var Progress int64
-var Total int64
-
-func DownloadFile(c *http.Client, filepath string, url string) error {
-	// Create the file
-	out, err := os.Create(filepath)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
+func downloadFile(c *http.Client, out *os.File, url string) error {
 	// Get the data
 	req, _ := http.NewRequest("GET", url, nil)
-	resp, err := c.Do(req)
-	if err != nil || resp.StatusCode != 200 {
+	res, err := c.Do(req)
+	if err != nil || res.StatusCode != 200 {
 		log.Errorf("La richiesta HTTP ha prodotto un errore: %s\n", err)
 		return err
 	}
-	defer resp.Body.Close()
+	defer res.Body.Close()
 
-	src := &PassThru{Reader: resp.Body}
-	Total += resp.ContentLength
-	defer func() {
-		Total -= resp.ContentLength
-		Progress -= src.Progress
-	}()
+	src := &passThru{Reader: res.Body, Size: float64(res.ContentLength)}
+	defer src.Close()
 
 	// Write the body to file
-	log.Infof("Scrivendo il file `%s`...\n", filepath)
+	log.Infof("Scrivendo il file `%s`...\n", out.Name())
 	if _, err = io.Copy(out, src); err != nil {
-		log.Errorf("La scrittura del file `%s` ha prodotto un errore: %s\n", filepath, err)
+		log.Errorf("La scrittura del file `%s` ha prodotto un errore: %s\n", out.Name(), err)
 		return err
 	}
-	log.Infof("Terminata la scrittura del file `%s`.\n", filepath)
+	log.Infof("Terminata la scrittura del file `%s`.\n", out.Name())
+	return nil
+}
+
+func downloadSegment(c *http.Client, out *os.File, seg *segment) error {
+	// Get the data
+	req, _ := http.NewRequest("GET", seg.Url, nil)
+	res, err := c.Do(req)
+	if err != nil || res.StatusCode != 200 {
+		log.Errorf("La richiesta HTTP ha prodotto un errore: %s\n", err)
+		return err
+	}
+	defer res.Body.Close()
+
+	Progress += seg.Size
+	defer seg.Close()
+
+	// Write the body to file
+	log.Infof("Scrivendo il file `%s`...\n", out.Name())
+	if _, err = io.Copy(out, res.Body); err != nil {
+		log.Errorf("La scrittura del file `%s` ha prodotto un errore: %s\n", out.Name(), err)
+		return err
+	}
+	log.Infof("Terminata la scrittura del file `%s`.\n", out.Name())
 	return nil
 }
 
 func Downloader_mp4(c *http.Client, path string, filename string, jobs <-chan IndexedUrl) {
 	for j := range jobs {
 		name := filepath.Join(path, filename+strconv.Itoa(j.Index)+".mp4")
+		out, err := os.Create(name)
+		if err != nil {
+			log.Errorf("La creazione del file `%s` ha prodotto un errore: %s\n", out.Name(), err)
+			return
+		}
+		defer out.Close()
+
 		startTime := time.Now()
 		log.Printf("Inizio download di `%s`...\n", filename+strconv.Itoa(j.Index)+".mp4")
-
-		if err := DownloadFile(c, name, j.Url); err != nil {
+		if err := downloadFile(c, out, j.Url); err != nil {
 			log.Fatalf("Errore durante il download del file `%s`: %s\n", name, err)
 		}
-
 		log.Printf("Finito di scaricare `%s` in %s.\n", filename+strconv.Itoa(j.Index)+".mp4", time.Since(startTime).String())
 	}
 }
 
-func Downloader_m3u8(path string, filename string, jobs <-chan IndexedUrl) {
+func Downloader_m3u8(c *http.Client, path string, filename string, jobs <-chan IndexedUrl) {
 	for j := range jobs {
-		outPath := filepath.Join(path, filename+strconv.Itoa(j.Index)+".mp4")
+		name := filepath.Join(path, filename+strconv.Itoa(j.Index)+".mp4")
+		out, err := os.Create(name)
+		if err != nil {
+			log.Errorf("La creazione del file `%s` ha prodotto un errore: %s\n", out.Name(), err)
+			return
+		}
+		defer out.Close()
+
+		segs := make(chan *segment)
 		startTime := time.Now()
 		log.Printf("Inizio download di `%s`...\n", filename+strconv.Itoa(j.Index)+".mp4")
-
-		if err := ffmpeg.Input(j.Url).Output(
-			outPath,
-			ffmpeg.KwArgs{"protocol_whitelist": "file,http,https,tcp,tls,crypto", "c": "copy"},
-		).Run(); err != nil {
-			log.Fatalf("Errore durante il download del file `%s` con FFMPEG: %s\n", outPath, err)
+		go getPlaylist(c, j.Url, segs)
+		for s := range segs {
+			if err := downloadSegment(c, out, s); err != nil {
+				log.Fatalf("Errore durante il download del file `%s`: %s\n", name, err)
+			}
 		}
-
 		log.Printf("Finito di scaricare `%s` in %s.\n", filename+strconv.Itoa(j.Index)+".mp4", time.Since(startTime).String())
 	}
+}
+
+func getPlaylist(c *http.Client, urlStr string, dlc chan *segment) {
+	playlistUrl, err := url.Parse(urlStr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	req, _ := http.NewRequest("GET", urlStr, nil)
+	res, err := c.Do(req)
+	if err != nil {
+		log.Print(err)
+	}
+	defer res.Body.Close()
+	playlist, err := m3u8.Read(res.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, v := range playlist.Segments() {
+		if v != nil {
+			var msURI string
+			if strings.HasPrefix(v.Segment, "http") {
+				msURI, err = url.QueryUnescape(v.Segment)
+				if err != nil {
+					log.Fatal(err)
+				}
+			} else {
+				msUrl, err := playlistUrl.Parse(v.Segment)
+				if err != nil {
+					log.Print(err)
+					continue
+				}
+				msURI, err = url.QueryUnescape(msUrl.String())
+				if err != nil {
+					log.Fatal(err)
+				}
+			}
+			dlc <- &segment{msURI, v.Duration}
+		}
+	}
+	close(dlc)
 }

@@ -20,6 +20,7 @@ func (a *AppLogger) Print(message string) {
 		return
 	}
 	wails.WindowExecJS(*a.ctx, fmt.Sprintf("console.log(\"%s\");", message))
+	wails.WindowExecJS(*a.ctx, fmt.Sprintf("window.notifications.default(\"%s\", 3000);", message))
 	Print(message)
 }
 

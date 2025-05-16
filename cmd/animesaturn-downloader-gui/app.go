@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os/exec"
 	"strings"
 	"sync"
 	"time"
@@ -37,8 +36,9 @@ func (a *App) startup(ctx context.Context) {
 }
 
 func (a *App) SearchAnime(s string, p uint) []helper.Anime {
-	if p <= 0 {
+	if p == 0 {
 		wails.LogErrorf(a.ctx, "Pagina non valida: %d\n", p)
+		return []helper.Anime{}
 	}
 	animes, err := helper.GetSearchResults(a.client, s, p)
 	if err != nil {
@@ -61,7 +61,7 @@ func (a *App) DownloadAnime(link string, primo int, ultimo int, filename string,
 				wails.WindowExecJS(
 					a.ctx,
 					fmt.Sprintf(
-						"window.progressBarProgress = %d; window.progressBarTotal = %d",
+						"window.progressBarProgress = %f; window.progressBarTotal = %f",
 						helper.Progress,
 						helper.Total,
 					),
@@ -81,7 +81,7 @@ func (a *App) DownloadAnime(link string, primo int, ultimo int, filename string,
 	if err != nil {
 		return false
 	}
-	wails.WindowExecJS(a.ctx, "window.notifications.default(\"Iniziando il download...\", 3000);")
+	wails.LogPrint(a.ctx, "Iniziando il download...")
 
 	wails.LogInfo(a.ctx, "Cercando i link agli episodi...\n")
 	var episodi []string
@@ -138,12 +138,7 @@ func (a *App) DownloadAnime(link string, primo int, ultimo int, filename string,
 	}
 	if len(m3u8Files) > 0 {
 		// new style downloads
-		wails.LogInfo(a.ctx, "Rilevati file m3u8! Inizializando il download tramite FFMPEG...\n")
-		err := exec.Command("ffmpeg", "-version").Run()
-		if err != nil {
-			wails.LogError(a.ctx, "Per questo tipo di file è necessario FFMPEG. Per favore installalo e riprova.\n")
-			return false
-		}
+		helper.ProgressStart_m3u8(a.client, m3u8Files)
 
 		jobs := make(chan helper.IndexedUrl, len(m3u8Files))
 		wg := sync.WaitGroup{}
@@ -151,7 +146,7 @@ func (a *App) DownloadAnime(link string, primo int, ultimo int, filename string,
 			wg.Add(1)
 			go func(wg *sync.WaitGroup) {
 				defer wg.Done()
-				helper.Downloader_m3u8(path, filename, jobs)
+				helper.Downloader_m3u8(a.client, path, filename, jobs)
 			}(&wg)
 		}
 
@@ -163,6 +158,8 @@ func (a *App) DownloadAnime(link string, primo int, ultimo int, filename string,
 	}
 	if len(mp4Files) > 0 {
 		// old style downloads
+		helper.ProgressStart_mp4(a.client, mp4Files)
+
 		jobs := make(chan helper.IndexedUrl, len(mp4Files))
 		wg := sync.WaitGroup{}
 		for range workers {
@@ -204,6 +201,10 @@ func (a *App) GetBaseUrl() string {
 }
 
 func (a *App) GetPageNumber(s string) uint {
-	p, _ := helper.GetPageNumber(a.client, s)
+	p, err := helper.GetPageNumber(a.client, s)
+	if err != nil {
+		wails.LogErrorf(a.ctx, "Errore durante la ricerca delle pagine: %s", err)
+		return 0
+	}
 	return p
 }

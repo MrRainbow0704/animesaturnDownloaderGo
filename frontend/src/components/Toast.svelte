@@ -24,8 +24,7 @@ let themes: {
 			animate:flip
 			class="toast"
 			style="background: {themes[notification.type]};"
-			transition:fly={{ y: 30 }}
-		>
+			transition:fly={{ y: 30 }}>
 			<div class="content">{notification.message}</div>
 		</div>
 	{/each}

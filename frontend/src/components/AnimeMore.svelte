@@ -6,12 +6,16 @@ import { notifications } from "$lib/notifications";
 
 let { anime }: { anime: helper.Anime } = $props();
 
-let primo: number = $state(anime.Info.FirstEpisode);
-let ultimo: number = $state(anime.Info.LastEpisode);
-let filename: string = $state(anime.Title.replace(/[<>:"/\\|?*]+/g, ""));
-let workers: number = $state(3);
+let primo: string = $derived(anime.Info.EpisodesList[0]);
+let ultimo: string = $derived(
+	anime.Info.EpisodesList[anime.Info.EpisodesList.length - 1]
+);
+let filename: string = $derived(anime.Title.replace(/[<>:"/\\|?*]+/g, ""));
+let workers: number = $derived(
+	anime.Info.EpisodeCount < 3 ? anime.Info.EpisodeCount : 3
+);
 let downloadStatus = $state("");
-console.log(anime);
+
 function download(): void {
 	if (primo > ultimo) {
 		notifications.error(
@@ -21,7 +25,13 @@ function download(): void {
 		return;
 	}
 	downloading.set(true);
-	DownloadAnime(anime.Url, primo, ultimo, filename, workers).then((ok) => {
+	DownloadAnime(
+		anime.Url,
+		parseInt(primo),
+		parseInt(ultimo),
+		filename,
+		workers
+	).then((ok) => {
 		downloading.set(false);
 		ok
 			? notifications.success("Finito di scaricare i file!", 3000)
@@ -37,6 +47,13 @@ function download(): void {
 	<article>
 		<h1>{anime.Title}</h1>
 		<hr />
+		{#if anime.Info.Is18plus}
+			<div class="hentai">
+				Stai per vedere una serie <b>R-18</b>.
+				<br />
+				Questa serie è adatta solo ad un pubblico <b>maggiorenne</b>.
+			</div>
+		{/if}
 		<ul class="stats">
 			<li><b>Studio:</b> {anime.Info.Studio}</li>
 			<hr />
@@ -65,8 +82,7 @@ function download(): void {
 			onsubmit={(e) => {
 				e.preventDefault();
 				download();
-			}}
-		>
+			}}>
 			<label style="--text: '[{primo}-{ultimo}].mp4';">
 				Nome dei File scaricati:
 				<input type="text" name="filename" bind:value={filename} />
@@ -75,23 +91,26 @@ function download(): void {
 				Episodi da scaricare.
 				<label>
 					Da:
-					<input
-						type="number"
-						name="primo"
-						min={anime.Info.FirstEpisode}
-						max={anime.Info.LastEpisode}
-						bind:value={primo}
-					/>
-				</label>
-				<label>
-					a:
-					<input
-						type="number"
-						name="ultimo"
-						min={anime.Info.FirstEpisode}
-						max={anime.Info.LastEpisode}
-						bind:value={ultimo}
-					/>
+					<select name="primo" bind:value={primo}>
+						{#each anime.Info.EpisodesList as e}
+							<option
+								selected={e === anime.Info.EpisodesList[0]}
+								value={e}>{e}</option>
+						{/each}
+					</select>
+					<label>
+						a:
+						<select name="ultimo" bind:value={ultimo}>
+							{#each anime.Info.EpisodesList as e}
+								<option
+									selected={e ===
+										anime.Info.EpisodesList[
+											anime.Info.EpisodesList.length - 1
+										]}
+									value={e}>{e}</option>
+							{/each}
+						</select>
+					</label>
 				</label>
 			</div>
 			<label>
@@ -99,10 +118,9 @@ function download(): void {
 				<input
 					type="number"
 					name="workers"
-					min="0"
-					max="16"
-					bind:value={workers}
-				/>
+					min="1"
+					max={anime.Info.EpisodeCount}
+					bind:value={workers} />
 			</label>
 			<button disabled={$downloading} type="submit">Download</button>
 			<div>{downloadStatus}</div>
@@ -170,5 +188,29 @@ form > label:has(input[type="text"])::after {
 }
 form > label:has(input[name="filename"]) {
 	grid-template-columns: 15rem auto 0;
+}
+.hentai {
+	position: relative;
+	background: #ffc3c3;
+	color: #bc2e2e;
+	text-align: center;
+	border-radius: 4px;
+	width: 90%;
+	margin: auto;
+	padding: 0.5rem;
+	font-size: 1.25rem;
+}
+.hentai::before,
+.hentai::after {
+	content: "⚠";
+	font-size: 2.5rem;
+	position: absolute;
+	top: 0.25rem;
+}
+.hentai::before {
+	left: 1rem;
+}
+.hentai::after {
+	right: 1rem;
 }
 </style>

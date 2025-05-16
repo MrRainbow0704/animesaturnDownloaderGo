@@ -3,6 +3,7 @@ package helper
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -110,7 +111,7 @@ func GetSearchResults(c *http.Client, s string, p uint) ([]Anime, error) {
 		return anime, nil
 	}
 
-	u := fmt.Sprintf(BaseURL+"/animelist?search=%s&page=%s", s, p)
+	u := fmt.Sprintf(BaseURL+"/animelist?search=%s&page=%d", url.PathEscape(s), p)
 	req, _ := http.NewRequest("GET", u, nil)
 	res, err := c.Do(req)
 	if err != nil || res.StatusCode != 200 {
@@ -188,56 +189,33 @@ func GetAnimeInfo(c *http.Client, u string) (AnimeInfo, error) {
 		}
 	}
 	tags := strings.Split(
-		strings.TrimSpace(doc.Find(".margin-anime-page:nth-child(2)>:nth-child(3)").Text()),
+		strings.TrimSpace(doc.Find(".margin-anime-page:nth-child(2)>:nth-last-child(3)").Text()),
 		"\n",
 	)
+	hentai := false
+	if doc.Find(".margin-anime-page:nth-child(2)>div").Length() == 6 {
+		hentai = true
+	}
 	for i, t := range tags {
 		tags[i] = strings.TrimSpace(t)
 	}
 	plot := strings.TrimSpace(doc.Find("#full-trama").Text())
 
-	var first, last int
-	if epBtns := doc.Find("#resultsxd>ul"); epBtns.Length() > 0 {
-		first, err = strconv.Atoi(strings.TrimSpace(
-			strings.Split(epBtns.Find("li>:first-child").Text(), "-")[0],
-		))
-		if err != nil {
-			log.Errorf("Errore durante la conversione del primo episodio: %s\n", err)
-			return AnimeInfo{}, err
-		}
-		last, err = strconv.Atoi(strings.TrimSpace(
-			strings.Split(epBtns.Find("li>:last-child").Text(), "-")[1],
-		))
-		if err != nil {
-			log.Errorf("Errore durante la conversione dell'ultimo episodio: %s\n", err)
-			return AnimeInfo{}, err
-		}
-	} else {
-		first, err = strconv.Atoi(strings.TrimSpace(strings.Split(
-			strings.TrimSpace(doc.Find("#resultsxd>div>div>div:first-child").Text()),
-			" ",
-		)[1]))
-		if err != nil {
-			log.Errorf("Errore durante la conversione del primo episodio: %s\n", err)
-			return AnimeInfo{}, err
-		}
-		last, err = strconv.Atoi(strings.TrimSpace(strings.Split(
-			strings.TrimSpace(doc.Find("#resultsxd>div>div>div:last-child").Text()),
-			" ",
-		)[1]))
-		if err != nil {
-			log.Errorf("Errore durante la conversione dell'ultimo episodio: %s\n", err)
-			return AnimeInfo{}, err
-		}
-	}
+	var epList []string
+	doc.Find("#resultsxd>div>div>div>a").Each(func(i int, s *goquery.Selection) {
+		epList = append(epList,
+			strings.TrimSpace(strings.Split(strings.TrimSpace(s.Text()), " ")[1]),
+		)
+	})
+
 	return AnimeInfo{
 		EpisodeCount: nEps,
 		Tags:         tags,
 		Studio:       studio.Capture.String(),
 		Status:       status.Capture.String(),
 		Plot:         plot,
-		FirstEpisode: first,
-		LastEpisode:  last,
+		EpisodesList: epList,
+		Is18plus:     hentai,
 	}, nil
 }
 
@@ -292,7 +270,7 @@ func GetDefaultAnime(c *http.Client) ([]Anime, error) {
 }
 
 func GetPageNumber(c *http.Client, s string) (uint, error) {
-	u := fmt.Sprintf(BaseURL+"/animelist?search=%s", s)
+	u := fmt.Sprintf(BaseURL+"/animelist?search=%s", url.PathEscape(s))
 	req, _ := http.NewRequest("GET", u, nil)
 	res, err := c.Do(req)
 	if err != nil || res.StatusCode != 200 {
@@ -305,10 +283,20 @@ func GetPageNumber(c *http.Client, s string) (uint, error) {
 		return 0, err
 	}
 	var pagine int
-	text := doc.Find("#pagination>li.page-item.last").Text()
-	pagine, err = strconv.Atoi(text)
+	pageRegexp := regexp2.MustCompile(`(?<=totalPages: )(\d*)(?=,)`, 0)
+	code := doc.Find("body>div>script").Text()
+	if code == "" {
+		log.Info("No pagine.")
+		return 1, nil
+	}
+	text, err := pageRegexp.FindStringMatch(code)
 	if err != nil {
-		log.Infoln("Non dovresti usare il valore p=0 se non ci sono altre pagine.")
+		log.Errorf("Errore durante il parsing dello script: %s\n", err)
+		return 0, err
+	}
+	pagine, err = strconv.Atoi(text.String())
+	if err != nil {
+		log.Errorf("Errore durante la conversione delle pagine: %s", err)
 		return 1, nil
 	}
 	return uint(pagine), nil

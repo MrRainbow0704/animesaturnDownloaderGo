@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -251,11 +250,7 @@ func runDownload(link string, primo int, ultimo int, path string, filename strin
 	}
 	if len(m3u8Files) > 0 {
 		// new style downloads
-		log.Infoln("Rilevati file m3u8! Inizializando il download tramite FFMPEG...")
-		err := exec.Command("ffmpeg", "-version").Run()
-		if err != nil {
-			log.Fatalln("Per questo tipo di file è necessario FFMPEG. Per favore installalo e riprova.")
-		}
+		helper.ProgressStart_m3u8(client, m3u8Files)
 
 		jobs := make(chan helper.IndexedUrl, len(m3u8Files))
 		wg := sync.WaitGroup{}
@@ -263,7 +258,7 @@ func runDownload(link string, primo int, ultimo int, path string, filename strin
 			wg.Add(1)
 			go func(wg *sync.WaitGroup) {
 				defer wg.Done()
-				helper.Downloader_m3u8(path, filename, jobs)
+				helper.Downloader_m3u8(client, path, filename, jobs)
 			}(&wg)
 		}
 
@@ -275,6 +270,8 @@ func runDownload(link string, primo int, ultimo int, path string, filename strin
 	}
 	if len(mp4Files) > 0 {
 		// old style downloads
+		helper.ProgressStart_mp4(client, mp4Files)
+
 		jobs := make(chan helper.IndexedUrl, len(mp4Files))
 		wg := sync.WaitGroup{}
 		for range workers {
