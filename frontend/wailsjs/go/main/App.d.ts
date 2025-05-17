@@ -4,6 +4,8 @@ import {helper} from '../models';
 
 export function DownloadAnime(arg1:string,arg2:number,arg3:number,arg4:string,arg5:number):Promise<boolean>;
 
+export function GetAnimeInfo(arg1:string):Promise<helper.AnimeInfo>;
+
 export function GetBaseUrl():Promise<string>;
 
 export function GetDefaultAnime():Promise<Array<helper.Anime>>;

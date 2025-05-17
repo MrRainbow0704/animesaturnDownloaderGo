@@ -18,7 +18,9 @@ function handleKeydown(e: KeyboardEvent): void {
 			<button type="button" onclick={() => ($modalID = "")}>
 				<span aria-hidden="true">&times;</span>
 			</button>
-			<slot />
+			{#if modalId === $modalID}
+				<slot />
+			{/if}
 		</div>
 	</dialog>
 </div>

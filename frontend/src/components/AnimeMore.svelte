@@ -1,20 +1,34 @@
 <script lang="ts">
-import type { helper } from "$wails/go/models";
-import { DownloadAnime } from "$wails/go/main/App";
+import { helper } from "$wails/go/models";
+import { DownloadAnime, GetAnimeInfo } from "$wails/go/main/App";
 import { downloading } from "$lib/store";
 import { notifications } from "$lib/notifications";
+import SpinningWheeel from "$src/components/SpinningWheeel.svelte";
 
 let { anime }: { anime: helper.Anime } = $props();
 
-let primo: string = $derived(anime.Info.EpisodesList[0]);
-let ultimo: string = $derived(
-	anime.Info.EpisodesList[anime.Info.EpisodesList.length - 1]
+let info: helper.AnimeInfo = $state(
+	new helper.AnimeInfo({
+		EpisodeCount: 0,
+		Is18plus: false,
+		Tags: [],
+		Studio: "",
+		Status: "",
+		Plot: "",
+		EpisodesList: [],
+	})
 );
+let loaded: boolean = $state(false);
+GetAnimeInfo(anime.Url).then((res) => {
+	loaded = true;
+	info = res;
+});
+
+let primo: string = $derived(info.EpisodesList[0]);
+let ultimo: string = $derived(info.EpisodesList[info.EpisodesList.length - 1]);
 let filename: string = $derived(anime.Title.replace(/[<>:"/\\|?*]+/g, ""));
-let workers: number = $derived(
-	anime.Info.EpisodeCount < 3 ? anime.Info.EpisodeCount : 3
-);
-let downloadStatus = $state("");
+let workers: number = $derived(info.EpisodeCount < 3 ? info.EpisodeCount : 3);
+let downloadStatus: string = $state("");
 
 function download(): void {
 	if (primo > ultimo) {
@@ -40,93 +54,98 @@ function download(): void {
 }
 </script>
 
-<div class="more">
-	<aside aria-hidden="true">
-		<img src={anime.Poster} alt="{anime.Title} poster" />
-	</aside>
-	<article>
-		<h1>{anime.Title}</h1>
-		<hr />
-		{#if anime.Info.Is18plus}
-			<div class="hentai">
-				Stai per vedere una serie <b>R-18</b>.
-				<br />
-				Questa serie è adatta solo ad un pubblico <b>maggiorenne</b>.
-			</div>
-		{/if}
-		<ul class="stats">
-			<li><b>Studio:</b> {anime.Info.Studio}</li>
+{#if loaded}
+	<div class="more">
+		<aside aria-hidden="true">
+			<img src={anime.Poster} alt="{anime.Title} poster" />
+		</aside>
+		<article>
+			<h1>{anime.Title}</h1>
 			<hr />
-			<li><b>Status:</b> {anime.Info.Status}</li>
-			<hr />
-			<li>
-				<b>Episodi:</b>
-				{!anime.Info.EpisodeCount ? "??" : anime.Info.EpisodeCount}
-			</li>
-			<hr />
-			<li>
-				<b>Tags:</b>
-				<ul class="tags">
-					{#each anime.Info.Tags as tag}
-						<li>{tag}</li>
-					{/each}
-				</ul>
-			</li>
-		</ul>
-		<hr />
-		<h2>Trama</h2>
-		<p>{anime.Info.Plot}</p>
-		<hr />
-		<h2>Download</h2>
-		<form
-			onsubmit={(e) => {
-				e.preventDefault();
-				download();
-			}}>
-			<label style="--text: '[{primo}-{ultimo}].mp4';">
-				Nome dei File scaricati:
-				<input type="text" name="filename" bind:value={filename} />
-			</label>
-			<div class="input-container">
-				Episodi da scaricare.
-				<label>
-					Da:
-					<select name="primo" bind:value={primo}>
-						{#each anime.Info.EpisodesList as e}
-							<option
-								selected={e === anime.Info.EpisodesList[0]}
-								value={e}>{e}</option>
+			{#if info.Is18plus}
+				<div class="hentai">
+					Stai per vedere una serie <b>R-18</b>.
+					<br />
+					Questa serie è adatta solo ad un pubblico
+					<b>maggiorenne</b>.
+				</div>
+			{/if}
+			<ul class="stats">
+				<li><b>Studio:</b> {info.Studio}</li>
+				<hr />
+				<li><b>Status:</b> {info.Status}</li>
+				<hr />
+				<li>
+					<b>Episodi:</b>
+					{!info.EpisodeCount ? "??" : info.EpisodeCount}
+				</li>
+				<hr />
+				<li>
+					<b>Tags:</b>
+					<ul class="tags">
+						{#each info.Tags as tag}
+							<li>{tag}</li>
 						{/each}
-					</select>
+					</ul>
+				</li>
+			</ul>
+			<hr />
+			<h2>Trama</h2>
+			<p>{info.Plot}</p>
+			<hr />
+			<h2>Download</h2>
+			<form
+				onsubmit={(e) => {
+					e.preventDefault();
+					download();
+				}}>
+				<label style="--text: '[{primo}-{ultimo}].mp4';">
+					Nome dei File scaricati:
+					<input type="text" name="filename" bind:value={filename} />
+				</label>
+				<div class="input-container">
+					Episodi da scaricare.
 					<label>
-						a:
-						<select name="ultimo" bind:value={ultimo}>
-							{#each anime.Info.EpisodesList as e}
+						Da:
+						<select name="primo" bind:value={primo}>
+							{#each info.EpisodesList as e}
 								<option
-									selected={e ===
-										anime.Info.EpisodesList[
-											anime.Info.EpisodesList.length - 1
-										]}
+									selected={e === info.EpisodesList[0]}
 									value={e}>{e}</option>
 							{/each}
 						</select>
+						<label>
+							a:
+							<select name="ultimo" bind:value={ultimo}>
+								{#each info.EpisodesList as e}
+									<option
+										selected={e ===
+											info.EpisodesList[
+												info.EpisodesList.length - 1
+											]}
+										value={e}>{e}</option>
+								{/each}
+							</select>
+						</label>
 					</label>
+				</div>
+				<label>
+					Quanti worker da utilizzare
+					<input
+						type="number"
+						name="workers"
+						min="1"
+						max={info.EpisodeCount}
+						bind:value={workers} />
 				</label>
-			</div>
-			<label>
-				Quanti worker da utilizzare
-				<input
-					type="number"
-					name="workers"
-					min="1"
-					max={anime.Info.EpisodeCount}
-					bind:value={workers} />
-			</label>
-			<button disabled={$downloading} type="submit">Download</button>
-			<div>{downloadStatus}</div>
-		</form>
-	</article>
-</div>
+				<button disabled={$downloading} type="submit">Download</button>
+				<div>{downloadStatus}</div>
+			</form>
+		</article>
+	</div>
+{:else}
+	<SpinningWheeel />
+{/if}
 
 <style>
 aside {

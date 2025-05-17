@@ -192,6 +192,15 @@ func (a *App) GetDefaultAnime() []helper.Anime {
 	return animes
 }
 
+func (a *App) GetAnimeInfo(link string) helper.AnimeInfo {
+	info, err := helper.GetAnimeInfo(a.client, link)
+	if err != nil {
+		wails.LogErrorf(a.ctx, "Errore durante l'ottenimento delle informazioni: %s\n", err)
+		return helper.AnimeInfo{}
+	}
+	return info
+}
+
 func (a *App) SetBaseUrl(u string) {
 	helper.BaseURL = strings.Trim(u, "/")
 }

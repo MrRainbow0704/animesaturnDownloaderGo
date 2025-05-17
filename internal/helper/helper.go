@@ -21,7 +21,7 @@ type IndexedUrl struct {
 }
 
 type Anime struct {
-	Info   AnimeInfo
+	// Info   AnimeInfo
 	Title  string
 	Url    string
 	Poster string
@@ -97,6 +97,7 @@ func ProgressStart_mp4(c *http.Client, us []IndexedUrl) {
 
 func ProgressStart_m3u8(c *http.Client, us []IndexedUrl) {
 	for _, u := range us {
+		
 		req, _ := http.NewRequest("GET", u.Url, nil)
 		res, err := c.Do(req)
 		if err != nil {

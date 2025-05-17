@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/cache"
 	log "github.com/MrRainbow0704/animesaturnDownloaderGo/internal/logger"
 	"github.com/PuerkitoBio/goquery"
 
@@ -14,6 +15,13 @@ import (
 )
 
 func GetEpisodeLinks(c *http.Client, u string) ([]string, error) {
+	var links []string
+	cKey := cache.Key(u)
+	if err := cKey.Get(&links); err == nil {
+		log.Info("Usando la cache")
+		return links, nil
+	}
+
 	req, _ := http.NewRequest("GET", u, nil)
 	res, err := c.Do(req)
 	if err != nil || res.StatusCode != 200 {
@@ -25,7 +33,6 @@ func GetEpisodeLinks(c *http.Client, u string) ([]string, error) {
 		log.Errorf("Errore durante il parsing della pagina: %s\n", err)
 		return nil, err
 	}
-	links := []string{}
 	ep0 := false
 	doc.Find("a.bottone-ep").Each(func(i int, s *goquery.Selection) {
 		href, _ := s.Attr("href")
@@ -37,10 +44,19 @@ func GetEpisodeLinks(c *http.Client, u string) ([]string, error) {
 	if !ep0 {
 		return append([]string{"NO EP 0"}, links...), nil
 	}
+
+	cKey.Set(links)
 	return links, nil
 }
 
 func GetStreamLink(c *http.Client, u string, i int) (IndexedUrl, error) {
+	var iurl IndexedUrl
+	cKey := cache.Key(u, i)
+	if err := cKey.Get(&iurl); err == nil {
+		log.Info("Usando la cache")
+		return iurl, nil
+	}
+
 	req, _ := http.NewRequest("GET", u, nil)
 	res, err := c.Do(req)
 	if err != nil || res.StatusCode != 200 {
@@ -59,10 +75,20 @@ func GetStreamLink(c *http.Client, u string, i int) (IndexedUrl, error) {
 			link = href
 		}
 	})
-	return IndexedUrl{i, link}, nil
+
+	iurl = IndexedUrl{i, link}
+	cKey.Set(iurl)
+	return iurl, nil
 }
 
 func GetVideoLink(c *http.Client, u string, i int) (IndexedUrl, error) {
+	var iurl IndexedUrl
+	cKey := cache.Key(u, i)
+	if err := cKey.Get(&iurl); err == nil {
+		log.Info("Usando la cache")
+		return iurl, nil
+	}
+
 	req, _ := http.NewRequest("GET", u, nil)
 	res, err := c.Do(req)
 	if err != nil || res.StatusCode != 200 {
@@ -90,10 +116,20 @@ func GetVideoLink(c *http.Client, u string, i int) (IndexedUrl, error) {
 			link = src
 		}
 	})
-	return IndexedUrl{i, link}, nil
+
+	iurl = IndexedUrl{i, link}
+	cKey.Set(iurl)
+	return iurl, nil
 }
 
 func GetSearchResults(c *http.Client, s string, p uint) ([]Anime, error) {
+	var anime []Anime
+	cKey := cache.Key(s, p, BaseURL)
+	if err := cKey.Get(&anime); err == nil {
+		log.Info("Usando la cache")
+		return anime, nil
+	}
+
 	if p == 0 {
 		pagine, err := GetPageNumber(c, s)
 		if err != nil {
@@ -108,6 +144,8 @@ func GetSearchResults(c *http.Client, s string, p uint) ([]Anime, error) {
 			}
 			anime = append(anime, a...)
 		}
+
+		cKey.Set(anime)
 		return anime, nil
 	}
 
@@ -123,7 +161,6 @@ func GetSearchResults(c *http.Client, s string, p uint) ([]Anime, error) {
 		log.Errorf("Errore durante il parsing della pagina: %s\n", err)
 		return nil, err
 	}
-	anime := []Anime{}
 	doc.Find(".item-archivio").Each(func(i int, s *goquery.Selection) {
 		title := strings.TrimSpace(s.Find(".info-archivio>h3>a").Text())
 		href, ok := s.Find(".info-archivio>h3>a").Attr("href")
@@ -136,18 +173,22 @@ func GetSearchResults(c *http.Client, s string, p uint) ([]Anime, error) {
 			log.Errorf("Errore durante il parsing del poster.\n")
 			return
 		}
-		info, err := GetAnimeInfo(c, href)
-		if err != nil {
-			log.Error("Errore durante il parsing delle informazioni.\n")
-			return
-		}
-		a := Anime{Title: title, Url: href, Poster: poster, Info: info}
+		a := Anime{Title: title, Url: href, Poster: poster}
 		anime = append(anime, a)
 	})
+
+	cKey.Set(anime)
 	return anime, nil
 }
 
 func GetAnimeInfo(c *http.Client, u string) (AnimeInfo, error) {
+	var info AnimeInfo
+	cKey := cache.Key(u)
+	if err := cKey.Get(&info); err == nil {
+		log.Info("Usando la cache")
+		return info, nil
+	}
+
 	req, _ := http.NewRequest("GET", u, nil)
 	res, err := c.Do(req)
 	if err != nil || res.StatusCode != 200 {
@@ -208,7 +249,7 @@ func GetAnimeInfo(c *http.Client, u string) (AnimeInfo, error) {
 		)
 	})
 
-	return AnimeInfo{
+	info = AnimeInfo{
 		EpisodeCount: nEps,
 		Tags:         tags,
 		Studio:       studio.Capture.String(),
@@ -216,10 +257,19 @@ func GetAnimeInfo(c *http.Client, u string) (AnimeInfo, error) {
 		Plot:         plot,
 		EpisodesList: epList,
 		Is18plus:     hentai,
-	}, nil
+	}
+	cKey.Set(info)
+	return info, nil
 }
 
 func GetDefaultAnime(c *http.Client) ([]Anime, error) {
+	var anime []Anime
+	cKey := cache.Key(BaseURL)
+	if err := cKey.Get(&anime); err == nil {
+		log.Info("Usando la cache")
+		return anime, nil
+	}
+
 	req, _ := http.NewRequest("GET", BaseURL, nil)
 	res, err := c.Do(req)
 	if err != nil || res.StatusCode != 200 {
@@ -231,7 +281,6 @@ func GetDefaultAnime(c *http.Client) ([]Anime, error) {
 		log.Errorf("Errore durante il parsing della pagina: %s\n", err)
 		return nil, err
 	}
-	anime := []Anime{}
 	doc.Find(".carousel-caption>a").Each(func(i int, s *goquery.Selection) {
 		title := s.Text()
 		href, ok := s.Attr("href")
@@ -257,19 +306,22 @@ func GetDefaultAnime(c *http.Client) ([]Anime, error) {
 			return
 		}
 
-		info, err := GetAnimeInfo(c, href)
-		if err != nil {
-			log.Error("Errore durante il parsing delle informazioni.\n")
-			return
-		}
-
-		a := Anime{Title: title, Url: href, Info: info, Poster: poster}
+		a := Anime{Title: title, Url: href, Poster: poster}
 		anime = append(anime, a)
 	})
+
+	cKey.Set(anime)
 	return anime, nil
 }
 
 func GetPageNumber(c *http.Client, s string) (uint, error) {
+	var pages uint
+	cKey := cache.Key(s, BaseURL)
+	if err := cKey.Get(&pages); err == nil {
+		log.Info("Usando la cache")
+		return pages, nil
+	}
+
 	u := fmt.Sprintf(BaseURL+"/animelist?search=%s", url.PathEscape(s))
 	req, _ := http.NewRequest("GET", u, nil)
 	res, err := c.Do(req)
@@ -299,5 +351,7 @@ func GetPageNumber(c *http.Client, s string) (uint, error) {
 		log.Errorf("Errore durante la conversione delle pagine: %s", err)
 		return 1, nil
 	}
+
+	cKey.Set(uint(pagine))
 	return uint(pagine), nil
 }

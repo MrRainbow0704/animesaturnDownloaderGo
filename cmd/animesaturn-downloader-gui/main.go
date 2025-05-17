@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/MrRainbow0704/animesaturnDownloaderGo/frontend"
+	_ "github.com/MrRainbow0704/animesaturnDownloaderGo/internal/cache"
 	log "github.com/MrRainbow0704/animesaturnDownloaderGo/internal/logger"
 	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/version"
 

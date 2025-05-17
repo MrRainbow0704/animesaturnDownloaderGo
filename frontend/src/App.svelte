@@ -75,8 +75,6 @@ onMount(defaultSearch);
 		}}>
 		<input
 			bind:value={search}
-			required
-			aria-required="true"
 			autocomplete="off"
 			spellcheck="false"
 			class="input"

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/cache"
 	log "github.com/MrRainbow0704/animesaturnDownloaderGo/internal/logger"
 	"github.com/etherlabsio/go-m3u8/m3u8"
 )
@@ -103,6 +104,16 @@ func Downloader_m3u8(c *http.Client, path string, filename string, jobs <-chan I
 }
 
 func getPlaylist(c *http.Client, urlStr string, dlc chan *segment) {
+	var segments []segment
+	cKey := cache.Key(urlStr)
+	if err := cKey.Get(&segments); err == nil {
+		log.Info("Usando la cache")
+		for _, s := range segments {
+			dlc <- &s
+		}
+		return
+	}
+
 	playlistUrl, err := url.Parse(urlStr)
 	if err != nil {
 		log.Fatal(err)
@@ -117,6 +128,7 @@ func getPlaylist(c *http.Client, urlStr string, dlc chan *segment) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	for _, v := range playlist.Segments() {
 		if v != nil {
 			var msURI string
@@ -136,8 +148,12 @@ func getPlaylist(c *http.Client, urlStr string, dlc chan *segment) {
 					log.Fatal(err)
 				}
 			}
-			dlc <- &segment{msURI, v.Duration}
+			s := segment{msURI, v.Duration}
+			dlc <- &s
+			segments = append(segments, s)
 		}
 	}
+
+	cKey.Set(segments)
 	close(dlc)
 }

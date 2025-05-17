@@ -6,6 +6,10 @@ export function DownloadAnime(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['main']['App']['DownloadAnime'](arg1, arg2, arg3, arg4, arg5);
 }
 
+export function GetAnimeInfo(arg1) {
+  return window['go']['main']['App']['GetAnimeInfo'](arg1);
+}
+
 export function GetBaseUrl() {
   return window['go']['main']['App']['GetBaseUrl']();
 }
