@@ -60,6 +60,8 @@ func Infof(format string, v ...any) {
 func Error(v ...any) {
 	if Verbose {
 		l.SetFlags(log.Ltime | log.Llongfile)
+	} else {
+		l.SetFlags(0)
 	}
 	l.SetPrefix(fgRed.String() + "[ERRORE] ")
 	l.Print(v...)
@@ -68,6 +70,8 @@ func Error(v ...any) {
 func Errorln(v ...any) {
 	if Verbose {
 		l.SetFlags(log.Ltime | log.Llongfile)
+	} else {
+		l.SetFlags(0)
 	}
 	l.SetPrefix(fgRed.String() + "[ERRORE] ")
 	l.Println(v...)
@@ -76,6 +80,8 @@ func Errorln(v ...any) {
 func Errorf(format string, v ...any) {
 	if Verbose {
 		l.SetFlags(log.Ltime | log.Llongfile)
+	} else {
+		l.SetFlags(0)
 	}
 	l.SetPrefix(fgRed.String() + "[ERRORE] ")
 	l.Printf(format, v...)
@@ -84,6 +90,8 @@ func Errorf(format string, v ...any) {
 func Fatal(v ...any) {
 	if Verbose {
 		l.SetFlags(log.Ltime | log.Llongfile)
+	} else {
+		l.SetFlags(0)
 	}
 	l.SetPrefix(fgRedBright.String() + "[CRITICO] ")
 	l.Fatal(v...)
@@ -92,6 +100,8 @@ func Fatal(v ...any) {
 func Fatalln(v ...any) {
 	if Verbose {
 		l.SetFlags(log.Ltime | log.Llongfile)
+	} else {
+		l.SetFlags(0)
 	}
 	l.SetPrefix(fgRedBright.String() + "[CRITICO] ")
 	l.Fatalln(v...)
@@ -100,6 +110,8 @@ func Fatalln(v ...any) {
 func Fatalf(format string, v ...any) {
 	if Verbose {
 		l.SetFlags(log.Ltime | log.Llongfile)
+	} else {
+		l.SetFlags(0)
 	}
 	l.SetPrefix(fgRedBright.String() + "[CRITICO] ")
 	l.Fatalf(format, v...)
