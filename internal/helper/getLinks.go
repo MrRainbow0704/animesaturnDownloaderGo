@@ -1,6 +1,7 @@
 package helper
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -116,6 +117,20 @@ func GetVideoLink(c *http.Client, u string, i int) (IndexedUrl, error) {
 			link = src
 		}
 	})
+	if link == "" {
+		linkRegexp := regexp2.MustCompile(`(?<=file:\s")(.*\.m3u8)(?=")`, 0)
+		code := doc.Find(".embed-responsive-item>script").Text()
+		if code == "" {
+			log.Info("No pagine.")
+			return IndexedUrl{}, errors.New("impossibile trovare il link")
+		}
+		text, err := linkRegexp.FindStringMatch(code)
+		if err != nil {
+			log.Errorf("Errore durante il parsing dello script: %s\n", err)
+			return IndexedUrl{}, err
+		}
+		link = text.String()
+	}
 
 	iurl = IndexedUrl{i, link}
 	cKey.Set(iurl)
@@ -126,7 +141,7 @@ func GetSearchResults(c *http.Client, s string, p uint) ([]Anime, error) {
 	var anime []Anime
 	cKey := cache.Key(s, p, BaseURL)
 	if err := cKey.Get(&anime); err == nil {
-		log.Error("Usando la cache")
+		log.Info("Usando la cache")
 		return anime, nil
 	}
 

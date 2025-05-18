@@ -2,13 +2,14 @@ package main
 
 import (
 	"github.com/MrRainbow0704/animesaturnDownloaderGo/frontend"
-	_ "github.com/MrRainbow0704/animesaturnDownloaderGo/internal/cache"
 	log "github.com/MrRainbow0704/animesaturnDownloaderGo/internal/logger"
 	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/version"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/mac"
+	"github.com/wailsapp/wails/v2/pkg/options/windows"
 )
 
 var appLogger = &log.AppLogger{}
@@ -24,6 +25,8 @@ func main() {
 		OnStartup:        app.startup,
 		Bind:             []any{app},
 		Logger:           appLogger,
+		Windows:          &windows.Options{IsZoomControlEnabled: false},
+		Mac:              &mac.Options{DisableZoom: true},
 	}
 
 	if err := wails.Run(opts); err != nil {

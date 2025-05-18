@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/cache"
 	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/helper"
 	log "github.com/MrRainbow0704/animesaturnDownloaderGo/internal/logger"
 	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/version"
@@ -35,6 +36,7 @@ Flag globali:
   -h, --help		stampa le informazioni di aiuto
   -v, --verbose		stampa altre informazioni di debug
   -V, --version		stampa la versione del programma e termina il programma
+  --no-cache		non utilizza la cache
 `)
 	}
 	downloadCommand.Usage = func() {
@@ -67,7 +69,7 @@ Utilizzo: animesaturn-downloader search -s <search>
 Flag per il sottocomando "search":
   -s, --search <search>		nome dell'anime da cercare		[obbligatorio]
   -p, --page <numero>		pagina da cercare. 0 => tutte		[default: 0]
-  -b, --base-url <url>		url alla home di animesaturn		[obbligatorio]
+  --base-url <url>		url alla home di animesaturn		[obbligatorio]
 `)
 	}
 
@@ -85,6 +87,9 @@ Flag per il sottocomando "search":
 	downloadCommand.BoolVar(&ver, "V", false, "stampa la versione del programma")
 	searchCommand.BoolVar(&ver, "version", false, "stampa la versione del programma")
 	searchCommand.BoolVar(&ver, "V", false, "stampa la versione del programma")
+	flag.BoolVar(&cache.NoCachce, "no-cache", false, "non utilizza la cache")
+	downloadCommand.BoolVar(&cache.NoCachce, "no-cache", false, "non utilizza la cache")
+	searchCommand.BoolVar(&cache.NoCachce, "no-cache", false, "non utilizza la cache")
 	var link string
 	downloadCommand.StringVar(&link, "url", "", "link alla pagina dell'anime")
 	downloadCommand.StringVar(&link, "u", "", "link alla pagina dell'anime")
@@ -106,12 +111,11 @@ Flag per il sottocomando "search":
 	var search string
 	searchCommand.StringVar(&search, "search", "", "nome dell'anime da cercare")
 	searchCommand.StringVar(&search, "s", "", "nome dell'anime da cercare")
-	var base string
-	searchCommand.StringVar(&base, "base-url", "", "url alla home di animesaturn")
-	searchCommand.StringVar(&base, "b", "", "url alla home di animesaturn")
 	var page uint
 	searchCommand.UintVar(&page, "page", 0, "pagina da cercare")
 	searchCommand.UintVar(&page, "p", 0, "pagina da cercare")
+	var base string
+	searchCommand.StringVar(&base, "base-url", "", "url alla home di animesaturn")
 
 	flag.Parse()
 
@@ -167,6 +171,7 @@ Flag per il sottocomando "search":
 			link, primo, ultimo, path, filename, primo, ultimo, workers,
 		)
 
+		cache.Init()
 		startTime := time.Now()
 		runDownload(link, primo, ultimo, path, filename, workers)
 		log.Infof("Tempo inpiegato: %s\n", time.Since(startTime).String())
@@ -184,6 +189,8 @@ Flag per il sottocomando "search":
 		if base != "" {
 			helper.BaseURL = strings.Trim(base, "/")
 		}
+		cache.Init()
+
 		runSearch(search, page)
 	default:
 		log.Fatalf("Sottocomando `%s` non riconosciuto.\n", os.Args[1])

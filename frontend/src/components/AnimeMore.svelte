@@ -27,9 +27,14 @@ GetAnimeInfo(anime.Url).then((res) => {
 let primo: string = $derived(info.EpisodesList[0]);
 let ultimo: string = $derived(info.EpisodesList[info.EpisodesList.length - 1]);
 let filename: string = $derived(anime.Title.replace(/[<>:"/\\|?*]+/g, ""));
-let workers: number = $derived(info.EpisodeCount < 3 ? info.EpisodeCount : 3);
-let downloadStatus: string = $state("");
+let maxWorkers: number = $derived(
+	info.EpisodesList.findIndex((e) => (e === ultimo ? true : false)) -
+		info.EpisodesList.findIndex((e) => (e === primo ? true : false)) +
+		1
+);
+let workers: number = $derived(maxWorkers < 3 ? maxWorkers : 3);
 
+let downloadStatus: string = $state("");
 function download(): void {
 	if (primo > ultimo) {
 		notifications.error(
@@ -60,7 +65,9 @@ function download(): void {
 			<img src={anime.Poster} alt="{anime.Title} poster" />
 		</aside>
 		<article>
-			<h1>{anime.Title}</h1>
+			<h1>
+				{anime.Title}{maxWorkers}
+			</h1>
 			<hr />
 			{#if info.Is18plus}
 				<div class="hentai">
@@ -135,7 +142,7 @@ function download(): void {
 						type="number"
 						name="workers"
 						min="1"
-						max={info.EpisodeCount}
+						max={maxWorkers}
 						bind:value={workers} />
 				</label>
 				<button disabled={$downloading} type="submit">Download</button>

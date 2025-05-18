@@ -18,6 +18,7 @@ var (
 	MaxItems = 500
 	MaxTime  = time.Hour * 24
 	cacheDir = "./.cache"
+	NoCachce = false
 )
 
 type cacheKey string
@@ -26,16 +27,28 @@ func (c cacheKey) String() string {
 	return string(c)
 }
 func (c cacheKey) Set(v any) error {
+	if NoCachce {
+		return nil
+	}
 	return set(c.String(), v)
 }
 func (c cacheKey) Get(v any) error {
+	if NoCachce {
+		return errors.New("--no-cache is enabled")
+	}
 	return get(c.String(), v)
 }
 func (c cacheKey) Del() error {
+	if NoCachce {
+		return nil
+	}
 	return del(c.String())
 }
 
 func Key(v ...any) cacheKey {
+	if NoCachce {
+		return ""
+	}
 	pc, _, _, ok := runtime.Caller(1)
 	if !ok {
 		return ""
@@ -49,7 +62,10 @@ func Key(v ...any) cacheKey {
 	return cacheKey(fmt.Sprintf("%x", hash))
 }
 
-func init() {
+func Init() {
+	if NoCachce {
+		return
+	}
 	if err := os.MkdirAll(cacheDir, 0x666); err != nil {
 		log.Fatalf("Impossibile creare la directory per la cache: %s", err)
 	}

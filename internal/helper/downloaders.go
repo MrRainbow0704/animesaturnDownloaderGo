@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/cache"
 	log "github.com/MrRainbow0704/animesaturnDownloaderGo/internal/logger"
 	"github.com/etherlabsio/go-m3u8/m3u8"
 )
@@ -52,12 +51,12 @@ func downloadSegment(c *http.Client, out *os.File, seg *segment) error {
 	defer seg.Close()
 
 	// Write the body to file
-	log.Infof("Scrivendo il file `%s`...\n", out.Name())
+	log.Infof("Scrivendo il segmento `%s` nel file `%s`...\n", seg.Url, out.Name())
 	if _, err = io.Copy(out, res.Body); err != nil {
-		log.Errorf("La scrittura del file `%s` ha prodotto un errore: %s\n", out.Name(), err)
+		log.Errorf("La scrittura del segmento `%s` nel file `%s` ha prodotto un errore: %s\n", seg.Url, out.Name(), err)
 		return err
 	}
-	log.Infof("Terminata la scrittura del file `%s`.\n", out.Name())
+	log.Infof("Terminata la scrittura del segmento `%s` nel file `%s`.\n", seg.Url, out.Name())
 	return nil
 }
 
@@ -91,69 +90,93 @@ func Downloader_m3u8(c *http.Client, path string, filename string, jobs <-chan I
 		defer out.Close()
 
 		segs := make(chan *segment)
+		canStart := make(chan bool)
 		startTime := time.Now()
 		log.Printf("Inizio download di `%s`...\n", filename+strconv.Itoa(j.Index)+".mp4")
-		go getPlaylist(c, j.Url, segs)
+		go getPlaylist(c, j.Url, segs, canStart)
 		for s := range segs {
+			log.Infof("%#+v", s)
 			if err := downloadSegment(c, out, s); err != nil {
-				log.Fatalf("Errore durante il download del file `%s`: %s\n", name, err)
+				log.Fatalf("Errore durante il download del segmento `%s` nel file `%s`: %s\n", s.Url, name, err)
 			}
 		}
 		log.Printf("Finito di scaricare `%s` in %s.\n", filename+strconv.Itoa(j.Index)+".mp4", time.Since(startTime).String())
 	}
 }
 
-func getPlaylist(c *http.Client, urlStr string, dlc chan *segment) {
-	var segments []segment
-	cKey := cache.Key(urlStr)
-	if err := cKey.Get(&segments); err == nil {
-		log.Info("Usando la cache")
-		for _, s := range segments {
-			dlc <- &s
-		}
-		return
-	}
-
+func getPlaylist(c *http.Client, urlStr string, dlc chan<- *segment, canStart chan bool) {
 	playlistUrl, err := url.Parse(urlStr)
 	if err != nil {
 		log.Fatal(err)
+		return
 	}
 	req, _ := http.NewRequest("GET", urlStr, nil)
 	res, err := c.Do(req)
 	if err != nil {
-		log.Print(err)
+		log.Error(err)
+		return
 	}
 	defer res.Body.Close()
 	playlist, err := m3u8.Read(res.Body)
 	if err != nil {
 		log.Fatal(err)
+		return
 	}
 
-	for _, v := range playlist.Segments() {
+	if playlist.IsMaster() {
+		var maxRes int
+		var maxResID int
+		for i, p := range playlist.Playlists() {
+			if p.Resolution.Height > maxRes {
+				maxRes = p.Resolution.Height
+				maxResID = i
+			}
+		}
+		urlStr, err = handleURI(playlistUrl, playlist.Playlists()[maxResID].URI)
+		if err != nil {
+			log.Error(err)
+			return
+		}
+		log.Info("Playlist master trovata, scarico la playlist secondaria...")
+		getPlaylist(c, urlStr, dlc, canStart)
+		return
+	}
+
+	log.Info(playlist.SegmentSize())
+	for i, v := range playlist.Segments() {
 		if v != nil {
-			var msURI string
-			if strings.HasPrefix(v.Segment, "http") {
-				msURI, err = url.QueryUnescape(v.Segment)
-				if err != nil {
-					log.Fatal(err)
-				}
-			} else {
-				msUrl, err := playlistUrl.Parse(v.Segment)
-				if err != nil {
-					log.Print(err)
-					continue
-				}
-				msURI, err = url.QueryUnescape(msUrl.String())
-				if err != nil {
-					log.Fatal(err)
-				}
+			msURI, err := handleURI(playlistUrl, v.Segment)
+			if err != nil {
+				log.Error(err)
+				continue
 			}
 			s := segment{msURI, v.Duration}
 			dlc <- &s
-			segments = append(segments, s)
 		}
+		log.Infof("Segmento %d",i)
 	}
-
-	cKey.Set(segments)
+	log.Info("All done")
 	close(dlc)
+}
+
+func handleURI(root *url.URL, uri string) (string, error) {
+	if strings.HasPrefix(uri, "http") {
+		new, err := url.QueryUnescape(uri)
+		if err != nil {
+			log.Error(err)
+			return "", err
+		}
+		return new, nil
+	}
+	sum, err := root.Parse(uri)
+	if err != nil {
+		log.Error(err)
+		return "", err
+	}
+	new, err := url.QueryUnescape(sum.String())
+	if err != nil {
+		log.Fatal(err)
+		return "", err
+	}
+	return new, nil
 }

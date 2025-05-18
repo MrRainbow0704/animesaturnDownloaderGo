@@ -11,14 +11,15 @@ import (
 
 type config struct {
 	Verbose bool   `json:"verbose"`
-	BaseURL string `json:"baseUrl"`
+	BaseURL string `json:"base_url"`
+	NoCache bool   `json:"no_cache"`
 }
 
 var c config
 
 const configPath string = "./config.json"
 
-func init() {
+func Init() {
 	f, err := os.Open(configPath)
 	if errors.Is(err, fs.ErrNotExist) {
 		f, err = os.Create(configPath)
@@ -28,7 +29,6 @@ func init() {
 		defer f.Close()
 
 		c = config{Verbose: false, BaseURL: "https://www.animesaturn.cx"}
-		log.Error("Ciao")
 		err = json.NewEncoder(f).Encode(c)
 		if err != nil {
 			log.Fatalf("Impossible decifrare il file di configurazione: %s", err)
@@ -51,6 +51,10 @@ func Verbose() bool {
 
 func BaseURL() string {
 	return c.BaseURL
+}
+
+func NoCache() bool {
+	return c.NoCache
 }
 
 func SetVerbose(v bool) error {
@@ -76,6 +80,21 @@ func SetBaseURL(v string) error {
 	defer f.Close()
 
 	c.BaseURL = v
+	err = json.NewEncoder(f).Encode(c)
+	if err != nil {
+		log.Fatalf("Impossible decifrare il file di configurazione: %s", err)
+	}
+	return nil
+}
+
+func SetNoCache(v bool) error {
+	f, err := os.Open(configPath)
+	if err != nil {
+		log.Fatalf("Impossible caricare il file di configurazione: %s", err)
+	}
+	defer f.Close()
+
+	c.NoCache = v
 	err = json.NewEncoder(f).Encode(c)
 	if err != nil {
 		log.Fatalf("Impossible decifrare il file di configurazione: %s", err)

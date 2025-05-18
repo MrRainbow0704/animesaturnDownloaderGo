@@ -97,7 +97,6 @@ func ProgressStart_mp4(c *http.Client, us []IndexedUrl) {
 
 func ProgressStart_m3u8(c *http.Client, us []IndexedUrl) {
 	for _, u := range us {
-		
 		req, _ := http.NewRequest("GET", u.Url, nil)
 		res, err := c.Do(req)
 		if err != nil {

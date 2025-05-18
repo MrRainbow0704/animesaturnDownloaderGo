@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/MrRainbow0704/animesaturnDownloaderGo/config"
+	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/cache"
 	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/helper"
 	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/logger"
 
@@ -26,8 +27,11 @@ type App struct {
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	appLogger.SetContext(&ctx)
+	config.Init()
 	logger.Verbose = config.Verbose()
 	helper.BaseURL = config.BaseURL()
+	cache.NoCachce = config.NoCache()
+	cache.Init()
 
 	wails.LogInfo(a.ctx, "Inizializzando la sessione...\n")
 	a.client = helper.NewClient()
@@ -135,10 +139,10 @@ func (a *App) DownloadAnime(link string, primo int, ultimo int, filename string,
 			mp4Files = append(mp4Files, link)
 		}
 	}
+
 	if len(m3u8Files) > 0 {
 		// new style downloads
 		helper.ProgressStart_m3u8(a.client, m3u8Files)
-
 		jobs := make(chan helper.IndexedUrl, len(m3u8Files))
 		wg := sync.WaitGroup{}
 		for range workers {

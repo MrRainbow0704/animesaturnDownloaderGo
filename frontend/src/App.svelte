@@ -34,7 +34,6 @@ function doSearch({ noReset = false }: { noReset?: boolean } = {}): void {
 	}
 	mainText = `Risultati della ricerca "${search}"`;
 	load = true;
-	console.log(`Search: ${search}, Page: ${page}`);
 	SearchAnime(search, page).then((result) => {
 		anime = result;
 		load = false;
