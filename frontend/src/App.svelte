@@ -15,19 +15,17 @@ import Toast from "$components/Toast.svelte";
 let search: string = $state("");
 let mainText: string = $state("");
 let load: boolean = $state(false);
-let enableSearch = $state(true);
 let anime: helper.Anime[] = $state([]);
 let pages: number = $state(0);
 let page: number = $state(1);
 function defaultSearch(): void {
 	pages = 0;
+	page = 1;
 	mainText = "Anime in evidenza";
 	load = true;
-	enableSearch = false;
 	GetDefaultAnime().then((result) => {
 		anime = result;
 		load = false;
-		enableSearch = true;
 	});
 }
 function doSearch({ noReset = false }: { noReset?: boolean } = {}): void {
@@ -36,16 +34,14 @@ function doSearch({ noReset = false }: { noReset?: boolean } = {}): void {
 	}
 	mainText = `Risultati della ricerca "${search}"`;
 	load = true;
-	enableSearch = false;
+	console.log(`Search: ${search}, Page: ${page}`);
 	SearchAnime(search, page).then((result) => {
 		anime = result;
 		load = false;
-		enableSearch = true;
 	});
 	GetPageNumber(search).then((result) => {
 		pages = result;
-		if (noReset === false) {
-			console.log("Changing page")
+		if (noReset !== true) {
 			page = 1;
 		}
 	});
@@ -81,7 +77,7 @@ onMount(defaultSearch);
 			id="name"
 			type="text"
 			placeholder="Cerca un'anime da scaricare" />
-		<button type="submit" disabled={!enableSearch}>Cerca</button>
+		<button type="submit" disabled={load}>Cerca</button>
 	</form>
 	<div class="wrapper">
 		<h2>{mainText}</h2>
@@ -110,7 +106,7 @@ onMount(defaultSearch);
 									onclick={(e) => {
 										e.preventDefault();
 										page = i + 1;
-										doSearch({ noReset: false });
+										doSearch({ noReset: true });
 									}}>
 									{i + 1}
 								</button>

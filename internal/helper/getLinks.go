@@ -126,7 +126,7 @@ func GetSearchResults(c *http.Client, s string, p uint) ([]Anime, error) {
 	var anime []Anime
 	cKey := cache.Key(s, p, BaseURL)
 	if err := cKey.Get(&anime); err == nil {
-		log.Info("Usando la cache")
+		log.Error("Usando la cache")
 		return anime, nil
 	}
 

@@ -17,9 +17,8 @@ import (
 
 // App struct
 type App struct {
-	Version string
-	ctx     context.Context
-	client  *http.Client
+	ctx    context.Context
+	client *http.Client
 }
 
 // startup is called when the app starts. The context is saved

@@ -14,9 +14,9 @@ import (
 var appLogger = &log.AppLogger{}
 
 func main() {
-	app := &App{Version: version.Get()}
+	app := &App{}
 	opts := &options.App{
-		Title:            "Animesaturn Downlaoder " + app.Version,
+		Title:            "Animesaturn Downlaoder " + version.Get(),
 		Width:            1280,
 		Height:           720,
 		AssetServer:      &assetserver.Options{Assets: frontend.Assets},
@@ -24,7 +24,6 @@ func main() {
 		OnStartup:        app.startup,
 		Bind:             []any{app},
 		Logger:           appLogger,
-		DisableResize:    true,
 	}
 
 	if err := wails.Run(opts); err != nil {

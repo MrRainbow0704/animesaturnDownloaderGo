@@ -45,11 +45,7 @@ func Key(v ...any) cacheKey {
 		return ""
 	}
 	// return cacheKey(base64.URLEncoding.EncodeToString([]byte(fmt.Sprintf("%s(%#+v)", f.Name(), v))))
-	hash, err := sha256.New().Write(fmt.Appendf([]byte{}, "%s(%#+v)", f.Name(), v))
-	if err != nil {
-		log.Fatalf("Impossibile creare l'hash: %s", err)
-		return ""
-	}
+	hash := sha256.Sum256(fmt.Appendf([]byte{}, "%s(%#+v)", f.Name(), v))
 	return cacheKey(fmt.Sprintf("%x", hash))
 }
 
