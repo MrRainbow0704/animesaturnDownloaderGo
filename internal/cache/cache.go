@@ -11,15 +11,17 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/MrRainbow0704/animesaturnDownloaderGo/config"
 	log "github.com/MrRainbow0704/animesaturnDownloaderGo/internal/logger"
 )
 
 var (
-	MaxItems = 500
-	MaxTime  = time.Hour * 24
-	cacheDir = "./.cache"
-	NoCachce = false
+	MaxItems int           = config.CacheMaxItems()
+	MaxTime  time.Duration = config.CacheMaxTime()
+	NoCachce bool          = config.NoCache()
 )
+
+var cacheDir string
 
 type cacheKey string
 
@@ -66,7 +68,14 @@ func Init() {
 	if NoCachce {
 		return
 	}
-	if err := os.MkdirAll(cacheDir, 0x666); err != nil {
+
+	if userCache, err := os.UserCacheDir(); err != nil {
+		cacheDir = "./.cache"
+	} else {
+		cacheDir = filepath.Join(userCache, "animesaturn-downloader/.cache")
+	}
+
+	if err := os.MkdirAll(cacheDir, 0x660); err != nil {
 		log.Fatalf("Impossibile creare la directory per la cache: %s", err)
 	}
 }

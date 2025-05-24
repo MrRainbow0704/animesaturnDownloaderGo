@@ -5,14 +5,17 @@ import (
 	"errors"
 	"io/fs"
 	"os"
+	"time"
 
 	log "github.com/MrRainbow0704/animesaturnDownloaderGo/internal/logger"
 )
 
 type config struct {
-	Verbose bool   `json:"verbose"`
-	BaseURL string `json:"base_url"`
-	NoCache bool   `json:"no_cache"`
+	Verbose       bool   `json:"verbose"`
+	NoCache       bool   `json:"no_cache"`
+	BaseURL       string `json:"base_url"`
+	CacheMaxItems int    `json:"cache_max_items"`
+	CacheMaxTime  int    `json:"cache_max_time"`
 }
 
 var c config
@@ -28,9 +31,14 @@ func Init() {
 		}
 		defer f.Close()
 
-		c = config{Verbose: false, BaseURL: "https://www.animesaturn.cx"}
-		err = json.NewEncoder(f).Encode(c)
-		if err != nil {
+		c = config{
+			Verbose:       false,
+			BaseURL:       "https://www.animesaturn.cx",
+			NoCache:       false,
+			CacheMaxItems: 500,
+			CacheMaxTime:  int(time.Hour * 24),
+		}
+		if err := json.NewEncoder(f).Encode(c); err != nil {
 			log.Fatalf("Impossible decifrare il file di configurazione: %s", err)
 		}
 		return
@@ -39,22 +47,25 @@ func Init() {
 	}
 	defer f.Close()
 
-	err = json.NewDecoder(f).Decode(&c)
-	if err != nil {
-		log.Fatalf("Impossible decifrare il file di configurazione: %s", err)
+	if err := json.NewDecoder(f).Decode(&c); err != nil {
+		log.Fatalf("Impossible decifrare il file di configurazione: %s. Eliminalo e riprova.", err)
 	}
 }
 
 func Verbose() bool {
 	return c.Verbose
 }
-
+func NoCache() bool {
+	return c.NoCache
+}
 func BaseURL() string {
 	return c.BaseURL
 }
-
-func NoCache() bool {
-	return c.NoCache
+func CacheMaxItems() int {
+	return c.CacheMaxItems
+}
+func CacheMaxTime() time.Duration {
+	return time.Duration(c.CacheMaxTime)
 }
 
 func SetVerbose(v bool) error {
@@ -71,7 +82,20 @@ func SetVerbose(v bool) error {
 	}
 	return nil
 }
+func SetNoCache(v bool) error {
+	f, err := os.Open(configPath)
+	if err != nil {
+		log.Fatalf("Impossible caricare il file di configurazione: %s", err)
+	}
+	defer f.Close()
 
+	c.NoCache = v
+	err = json.NewEncoder(f).Encode(c)
+	if err != nil {
+		log.Fatalf("Impossible decifrare il file di configurazione: %s", err)
+	}
+	return nil
+}
 func SetBaseURL(v string) error {
 	f, err := os.Open(configPath)
 	if err != nil {
@@ -86,15 +110,28 @@ func SetBaseURL(v string) error {
 	}
 	return nil
 }
-
-func SetNoCache(v bool) error {
+func SetCacheMaxItems(v int) error {
 	f, err := os.Open(configPath)
 	if err != nil {
 		log.Fatalf("Impossible caricare il file di configurazione: %s", err)
 	}
 	defer f.Close()
 
-	c.NoCache = v
+	c.CacheMaxItems = v
+	err = json.NewEncoder(f).Encode(c)
+	if err != nil {
+		log.Fatalf("Impossible decifrare il file di configurazione: %s", err)
+	}
+	return nil
+}
+func SetCacheMaxTime(v time.Duration) error {
+	f, err := os.Open(configPath)
+	if err != nil {
+		log.Fatalf("Impossible caricare il file di configurazione: %s", err)
+	}
+	defer f.Close()
+
+	c.CacheMaxTime = int(v)
 	err = json.NewEncoder(f).Encode(c)
 	if err != nil {
 		log.Fatalf("Impossible decifrare il file di configurazione: %s", err)

@@ -90,10 +90,9 @@ func Downloader_m3u8(c *http.Client, path string, filename string, jobs <-chan I
 		defer out.Close()
 
 		segs := make(chan *segment)
-		canStart := make(chan bool)
 		startTime := time.Now()
 		log.Printf("Inizio download di `%s`...\n", filename+strconv.Itoa(j.Index)+".mp4")
-		go getPlaylist(c, j.Url, segs, canStart)
+		go getPlaylist(c, j.Url, segs)
 		for s := range segs {
 			log.Infof("%#+v", s)
 			if err := downloadSegment(c, out, s); err != nil {
@@ -104,7 +103,7 @@ func Downloader_m3u8(c *http.Client, path string, filename string, jobs <-chan I
 	}
 }
 
-func getPlaylist(c *http.Client, urlStr string, dlc chan<- *segment, canStart chan bool) {
+func getPlaylist(c *http.Client, urlStr string, dlc chan<- *segment) {
 	playlistUrl, err := url.Parse(urlStr)
 	if err != nil {
 		log.Fatal(err)
@@ -138,7 +137,7 @@ func getPlaylist(c *http.Client, urlStr string, dlc chan<- *segment, canStart ch
 			return
 		}
 		log.Info("Playlist master trovata, scarico la playlist secondaria...")
-		getPlaylist(c, urlStr, dlc, canStart)
+		getPlaylist(c, urlStr, dlc)
 		return
 	}
 

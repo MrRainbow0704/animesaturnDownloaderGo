@@ -53,8 +53,8 @@ func (a *App) SearchAnime(s string, p uint) []helper.Anime {
 }
 
 func (a *App) DownloadAnime(link string, primo int, ultimo int, filename string, workers int) bool {
-	done := make(chan bool)
-	defer func() { done <- true }()
+	done := make(chan struct{})
+	defer close(done)
 	go func() {
 		for {
 			select {

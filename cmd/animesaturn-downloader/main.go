@@ -14,17 +14,33 @@ import (
 	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/version"
 )
 
+const (
+	header = `                 _                 _____       _                    
+     /\         (_)               / ____|     | |                   
+    /  \   _ __  _ _ __ ___   ___| (___   __ _| |_ _   _ _ __ _ __  
+   / /\ \ | '_ \| | '_ ` + "`" + ` _ \ / _ \\___ \ / _` + "`" + ` | __| | | | '__| '_ \ 
+  / ____ \| | | | | | | | | |  __/____) | (_| | |_| |_| | |  | | | |
+ /_/___ \_\_| |_|_|_| |_| |_|\___|_____/ \__,_|\__|\__,_|_|  |_| |_|
+ |  __ \                    | |               | |                   
+ | |  | | _____      ___ __ | | ___   __ _  __| | ___ _ __          
+ | |  | |/ _ \ \ /\ / / '_ \| |/ _ \ / _` + "`" + ` |/ _` + "`" + ` |/ _ \ '__|         
+ | |__| | (_) \ V  V /| | | | | (_) | (_| | (_| |  __/ |            
+ |_____/ \___/ \_/\_/ |_| |_|_|\___/ \__,_|\__,_|\___|_|           
+
+AnimesaturnDownloader è una utility per scaricare gli anime dal sito AnimeSaturn.
+Scritto in Go da Marco Simone.
+
+
+`
+)
+
 func main() {
 	cwd, _ := os.Getwd()
 	downloadCommand := flag.NewFlagSet("download", flag.ExitOnError)
 	searchCommand := flag.NewFlagSet("search", flag.ExitOnError)
 
 	flag.Usage = func() {
-		log.Print(`AnimesaturnDownloader è una utility per scaricare gli anime dal sito AnimeSaturn.
-Scritto in Go da Marco Simone.
-
-
-Questa schermata di aiuto è divisa in più parti, usa "animesaturn-downloader <sottocomando> -h" per vedere la schermata di aiuto per il sottocomando specifico.
+		log.Print(header + `Questa schermata di aiuto è divisa in più parti, usa "animesaturn-downloader <sottocomando> -h" per vedere la schermata di aiuto per il sottocomando specifico.
 
 I sottocomandi disponibili sono:
   download		Scarica gli episodi di un anime
@@ -40,11 +56,7 @@ Flag globali:
 `)
 	}
 	downloadCommand.Usage = func() {
-		log.Print(`AnimesaturnDownloader è una utility per scaricare gli anime dal sito AnimeSaturn.
-Scritto in Go da Marco Simone.
-
-
-Schermata di aiuto per il sottocomando "download".
+		log.Print(header + `Schermata di aiuto per il sottocomando "download".
 
 Utilizzo: animesaturn-downloader download -u <url> -n <file> [-v] [-d <percorso>] [-f <numero>] [-l <numero>] [-w <numero>]
 
@@ -58,11 +70,7 @@ Flag per il sottocomando "download":
 `)
 	}
 	searchCommand.Usage = func() {
-		log.Print(`AnimesaturnDownloader è una utility per scaricare gli anime dal sito AnimeSaturn.
-Scritto in Go da Marco Simone.
-
-
-Schermata di aiuto per il sottocomando "search".
+		log.Print(header + `Schermata di aiuto per il sottocomando "search".
 
 Utilizzo: animesaturn-downloader search -s <search>
 
