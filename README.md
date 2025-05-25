@@ -1,29 +1,40 @@
 # Animesaturn Downloader in Go
+
 Questa utility permette di scaricare anime dal famoso sito Animesaturn e salvarli in formato .mp4 sul computer. Contiene una versione CLI e una con interfaccia grafica.
 
 ## Build
-Per creare l'eseguibile, dopo aver installato correttamente go, eseguire nel terminale il seguente comando:
-- Per Linux/MacOS: 
+
+Per creare l'eseguibile, dopo aver installato correttamente go e make, eseguire nel terminale il seguente comando:
+
 ```console
-foo@bar:~/animesaturnDownloaderGo$ ./scripts/build.sh
+# Esegue la build di tutte le versioni
+foo@bar:~/animesaturnDownloaderGo$ make
+
+# Esegue la build per windows
+foo@bar:~/animesaturnDownloaderGo$ make win
+
+# Esegue la build per linux
+foo@bar:~/animesaturnDownloaderGo$ make linux
+
+# Esegue la build per mac
+foo@bar:~/animesaturnDownloaderGo$ make mac
 ```
-- Per Windows:
-```powershell
-PS ~\animesaturnDownloaderGo> .\scripts\build.ps1
-```
+Al termine della build, l'eseguibile sarà disponibile all'interno della cartella `./bin` con nome `animesaturn-downloader-(VERSIONE)-(PIATTAFORMA)`. <br>
+**Nota bene: È possibile fare la build per Linux da un dispositivo Windows, a patto che si usi il WSL (Windows Subsystem for Linux).** <br>
+**Inoltre non è possibile eseguire la build per mac su hardware non mac. [Prendetevela con Apple.](https://github.com/wailsapp/wails/issues/1041#issuecomment-2492133624)**
 
 ## Utilizzo
+
 ### CLI
+
 Per ottenere informazioni a proposito della CLI si può usare il seguente comando:
-- Per Linux/MacOS:
+
 ```console
 foo@bar:~/animesaturnDownloaderGo$ ./bin/animesaturn-downloader -h
 ```
-- Per Windows:
-```powershell
-PS ~\animesaturnDownloaderGo> .\bin\animesaturn-downloader.exe -h
-```
+
 Che produrrà un output simile a questo:
+
 ```console
 AnimesaturnDownloader è una utility per scaricare gli anime dal sito AnimeSaturn.
 Scritto in Go da Marco Simone.
@@ -44,23 +55,22 @@ Flag globali:
 ```
 
 Un esempio di comando può essere:
-- Per Linux/MacOS:
+
 ```console
 foo@bar:~/animesaturnDownloaderGo$ ./bin/animesaturn-downloader -u https://your-url-here/anime -f 1 -l 12 -d ./my-anime -n MyAnime_ -w 3
 ```
-- Per Windows:
-```powershell
-PS ~\animesaturnDownloaderGo> .\bin\animesaturn-downloader.exe -u https://your-url-here/anime -f 1 -l 12 -d ./my-anime -n MyAnime_ -w 3
-```
+
 Questo comando invoca l'eseguibile con i seguenti parametri:
-- url: https[]()://your-url-here/anime
-- primo episodio: 1
-- ultimo episodio: 12
-- cartella output: ./my-anime
-- nome dei file: MyAnime\_
-- worker da usare: 3
-  
+
+-   url: https[]()://your-url-here/anime
+-   primo episodio: 1
+-   ultimo episodio: 12
+-   cartella output: ./my-anime
+-   nome dei file: MyAnime\_
+-   worker da usare: 3
+
 NB: Il prgoramma aggiunge "i.mp4" alla fine di ogni file con i uguale al numero dell'episodio scaricato.
 
 ### Applicazione Grafica
-L'eseguibile per l'applicazione grafica è reperibile in ./bin/animesaturn-downloader-gui.exe
+
+L'eseguibile per l'applicazione grafica è reperibile in `./bin/animesaturn-downloader-(VERSIONE)-(PIATTAFORMA)-gui` e presenta una interfaccia grafica realizzata con svelte e wails.
