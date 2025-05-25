@@ -4,7 +4,7 @@ Questa utility permette di scaricare anime dal famoso sito Animesaturn e salvarl
 
 ## Build
 
-Per creare l'eseguibile, dopo aver installato correttamente go e make, eseguire nel terminale il seguente comando:
+Per creare l'eseguibile, dopo aver installato correttamente go e make, eseguire nel terminale uno dei seguenti comandi:
 
 ```console
 # Esegue la build di tutte le versioni

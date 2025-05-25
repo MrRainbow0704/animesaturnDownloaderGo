@@ -154,7 +154,7 @@ Flag per il sottocomando "search":
 		if !filepath.IsAbs(path) {
 			path = filepath.Join(cwd, path)
 		}
-		if err := os.MkdirAll(path, 0777); err != nil {
+		if err := os.MkdirAll(path, 0755); err != nil {
 			log.Printf("Errore durante la creazione della directory `%s`: %s", path, err)
 		}
 

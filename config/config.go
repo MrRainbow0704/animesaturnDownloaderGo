@@ -18,7 +18,13 @@ type config struct {
 	CacheMaxTime  int    `json:"cache_max_time"`
 }
 
-var c config
+var c = config{
+	Verbose:       false,
+	BaseURL:       "https://www.animesaturn.cx",
+	NoCache:       false,
+	CacheMaxItems: 500,
+	CacheMaxTime:  int(time.Hour * 24),
+}
 
 const configPath string = "./config.json"
 
@@ -31,13 +37,6 @@ func Init() {
 		}
 		defer f.Close()
 
-		c = config{
-			Verbose:       false,
-			BaseURL:       "https://www.animesaturn.cx",
-			NoCache:       false,
-			CacheMaxItems: 500,
-			CacheMaxTime:  int(time.Hour * 24),
-		}
 		if err := json.NewEncoder(f).Encode(c); err != nil {
 			log.Fatalf("Impossible decifrare il file di configurazione: %s", err)
 		}

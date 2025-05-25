@@ -7,33 +7,33 @@ END_DIR = ./bin
 END_DIR_GUI = ../../bin
 LDFLAGS = -ldflags="-X '$(PACKAGE)/internal/version.version=$(VERSION)'"
 
-.PHONY: clean build 
+.PHONY: all cli gui linux win mac linux-cli linux-gui win-cli win-gui mac-cli mac-gui
 
 all:
-	make cli
-	make gui
+	$(MAKE) cli
+	$(MAKE) gui
 
 cli:
-	make linux-cli
-	make win-cli
-	make mac-cli
+	$(MAKE) linux-cli
+	$(MAKE) win-cli
+	$(MAKE) mac-cli
 
 gui:
-	make linux-gui
-	make win-gui
-	make mac-gui
+	$(MAKE) linux-gui
+	$(MAKE) win-gui
+	$(MAKE) mac-gui
 
 linux:
-	make linux-cli
-	make linux-gui
+	$(MAKE) linux-cli
+	$(MAKE) linux-gui
 
 win:
-	make win-cli
-	make win-gui
+	$(MAKE) win-cli
+	$(MAKE) win-gui
 
 mac:
-	make mac-cli
-	make mac-gui
+	$(MAKE) mac-cli
+	$(MAKE) mac-gui
 
 linux-cli: export GOOS=linux
 linux-cli: export GOARCH=amd64

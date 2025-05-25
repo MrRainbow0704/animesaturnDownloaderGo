@@ -75,7 +75,7 @@ func Init() {
 		cacheDir = filepath.Join(userCache, "animesaturn-downloader/.cache")
 	}
 
-	if err := os.MkdirAll(cacheDir, 0x660); err != nil {
+	if err := os.MkdirAll(cacheDir, 0755); err != nil {
 		log.Fatalf("Impossibile creare la directory per la cache: %s", err)
 	}
 }
@@ -91,6 +91,7 @@ func cleaner() error {
 			del(i.Name())
 		}
 	}
+	
 	for len(fs) >= MaxItems {
 		if err := os.Remove(oldest()); err != nil {
 			log.Fatalf("Impossibile rimuovere il file di cache: %s", err)
@@ -104,6 +105,10 @@ func oldest() string {
 	fs, err := os.ReadDir(cacheDir)
 	if err != nil {
 		log.Fatalf("Impossibile leggere la directory per la cache: %s", err)
+		return ""
+	}
+
+	if len(fs) == 0 {
 		return ""
 	}
 
