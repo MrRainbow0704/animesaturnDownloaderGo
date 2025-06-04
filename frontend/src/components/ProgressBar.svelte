@@ -47,7 +47,7 @@ span::after {
 	position: relative;
 	right: 0.5rem;
 	top: calc(0.5rem - 2px);
-	z-index: 5;
+	z-index: 10;
 }
 
 footer {

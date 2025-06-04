@@ -93,7 +93,7 @@ dialog[open] {
 dialog {
 	background: none;
 	position: fixed;
-	z-index: 10;
+	z-index: 5;
 	left: 0;
 	top: 0;
 	width: 100%;
