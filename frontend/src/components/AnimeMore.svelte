@@ -66,7 +66,7 @@ function download(): void {
 		</aside>
 		<article>
 			<h1>
-				{anime.Title}{maxWorkers}
+				{anime.Title}
 			</h1>
 			<hr />
 			{#if info.Is18plus}

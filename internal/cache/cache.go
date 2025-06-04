@@ -21,10 +21,13 @@ var (
 	NoCachce bool          = config.NoCache()
 )
 
-var cacheDir string
+var CacheDir string
 
 type cacheKey string
 
+func (c cacheKey) File() string {
+	return file(c.String())
+}
 func (c cacheKey) String() string {
 	return string(c)
 }
@@ -32,19 +35,19 @@ func (c cacheKey) Set(v any) error {
 	if NoCachce {
 		return nil
 	}
-	return set(c.String(), v)
+	return set(c.File(), v)
 }
 func (c cacheKey) Get(v any) error {
 	if NoCachce {
 		return errors.New("--no-cache is enabled")
 	}
-	return get(c.String(), v)
+	return get(c.File(), v)
 }
 func (c cacheKey) Del() error {
 	if NoCachce {
 		return nil
 	}
-	return del(c.String())
+	return del(c.File())
 }
 
 func Key(v ...any) cacheKey {
@@ -59,9 +62,11 @@ func Key(v ...any) cacheKey {
 	if f == nil {
 		return ""
 	}
-	// return cacheKey(base64.URLEncoding.EncodeToString([]byte(fmt.Sprintf("%s(%#+v)", f.Name(), v))))
-	hash := sha256.Sum256(fmt.Appendf([]byte{}, "%s(%#+v)", f.Name(), v))
-	return cacheKey(fmt.Sprintf("%x", hash))
+
+	key := cacheKey(fmt.Sprintf("%x", sha256.Sum256(fmt.Appendf([]byte{}, "%s(%#+v)", f.Name(), v))))
+	checkAge(key.File())
+	cleaner()
+	return key
 }
 
 func Init() {
@@ -70,18 +75,33 @@ func Init() {
 	}
 
 	if userCache, err := os.UserCacheDir(); err != nil {
-		cacheDir = "./.cache"
+		CacheDir = "./.cache"
 	} else {
-		cacheDir = filepath.Join(userCache, "animesaturn-downloader/.cache")
+		CacheDir = filepath.Join(userCache, "animesaturn-downloader/.cache")
 	}
 
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+	if err := os.MkdirAll(CacheDir, 0755); err != nil {
 		log.Fatalf("Impossibile creare la directory per la cache: %s", err)
 	}
 }
 
+func checkAge(n string) error {
+	info, err := os.Stat(n)
+	if errors.Is(err, fs.ErrNotExist) {
+		log.Infof("il file di cache non esiste, verrà creato: %s", n)
+		return nil
+	} else if err != nil {
+		log.Errorf("Impossibile ottenere le informazioni sul file di cache: %s", err)
+		return err
+	}
+	if time.Since(info.ModTime()) >= MaxTime {
+		return del(n)
+	}
+	return nil
+}
+
 func cleaner() error {
-	fs, err := os.ReadDir(cacheDir)
+	fs, err := os.ReadDir(CacheDir)
 	if err != nil {
 		log.Fatalf("Impossibile leggere la directory per la cache: %s", err)
 		return err
@@ -91,7 +111,7 @@ func cleaner() error {
 			del(i.Name())
 		}
 	}
-	
+
 	for len(fs) >= MaxItems {
 		if err := os.Remove(oldest()); err != nil {
 			log.Fatalf("Impossibile rimuovere il file di cache: %s", err)
@@ -102,7 +122,7 @@ func cleaner() error {
 }
 
 func oldest() string {
-	fs, err := os.ReadDir(cacheDir)
+	fs, err := os.ReadDir(CacheDir)
 	if err != nil {
 		log.Fatalf("Impossibile leggere la directory per la cache: %s", err)
 		return ""
@@ -124,11 +144,9 @@ func oldest() string {
 }
 
 func set(n string, v any) error {
-	cleaner()
-
-	f, err := os.Create(file(n))
+	f, err := os.Create(n)
 	if errors.Is(err, fs.ErrExist) {
-		f, err = os.Open(file(n))
+		f, err = os.Open(n)
 	}
 	if err != nil {
 		log.Fatalf("Inpossibile creare file di cache: %s", err)
@@ -144,7 +162,7 @@ func set(n string, v any) error {
 }
 
 func get(n string, v any) error {
-	f, err := os.Open(file(n))
+	f, err := os.Open(n)
 	if err != nil {
 		return err
 	}
@@ -158,7 +176,7 @@ func get(n string, v any) error {
 }
 
 func del(n string) error {
-	if err := os.Remove(file(n)); err != nil {
+	if err := os.Remove(n); err != nil {
 		log.Fatalf("Impossibile rimuovere il file di cache: %s", err)
 		return err
 	}
@@ -166,5 +184,5 @@ func del(n string) error {
 }
 
 func file(n string) string {
-	return filepath.Join(cacheDir, n+".CACHE")
+	return filepath.Join(CacheDir, n+".CACHE")
 }
