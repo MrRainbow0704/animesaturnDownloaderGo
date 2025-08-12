@@ -53,6 +53,7 @@ Flag globali:
   -v, --verbose		stampa altre informazioni di debug
   -V, --version		stampa la versione del programma e termina il programma
   --no-cache		non utilizza la cache
+  --local-cache		forza il programma ad utilizzare una cache locale
 `)
 	}
 	downloadCommand.Usage = func() {
@@ -88,6 +89,10 @@ Flag per il sottocomando "search":
 	downloadCommand.BoolVar(&log.Verbose, "v", false, "stampa altre informazioni di debug")
 	searchCommand.BoolVar(&log.Verbose, "verbose", false, "stampa altre informazioni di debug")
 	searchCommand.BoolVar(&log.Verbose, "v", false, "stampa altre informazioni di debug")
+	var localCache bool
+	flag.BoolVar(&localCache, "local-cache", false, "force the program to use local cache")
+	downloadCommand.BoolVar(&localCache, "local-cache", false, "force the program to use local cache")
+	searchCommand.BoolVar(&localCache, "local-cache", false, "force the program to use local cache")
 	var ver bool
 	flag.BoolVar(&ver, "version", false, "stampa la versione del programma")
 	flag.BoolVar(&ver, "V", false, "stampa la versione del programma")
@@ -131,7 +136,13 @@ Flag per il sottocomando "search":
 		log.Printf("AnimesaturnDownloaderGo %s", version.Get())
 		return
 	}
-	if len(os.Args) < 2 {
+	var args []string
+	for _, arg := range os.Args {
+		if !strings.HasPrefix(arg, "-") {
+			args = append(args, arg)
+		}
+	}
+	if len(args) < 2 {
 		log.Fatal("Nessun sottocomando specificato.\nUsa \"animesaturn-downloader -h\" per vedere la schermata di aiuto.")
 		return
 	}
@@ -179,7 +190,7 @@ Flag per il sottocomando "search":
 			link, primo, ultimo, path, filename, primo, ultimo, workers,
 		)
 
-		cache.Init()
+		cache.Init(localCache)
 		startTime := time.Now()
 		runDownload(link, primo, ultimo, path, filename, workers)
 		log.Infof("Tempo inpiegato: %s\n", time.Since(startTime).String())
@@ -197,7 +208,7 @@ Flag per il sottocomando "search":
 		if base != "" {
 			helper.BaseURL = strings.Trim(base, "/")
 		}
-		cache.Init()
+		cache.Init(localCache)
 
 		runSearch(search, page)
 	default:

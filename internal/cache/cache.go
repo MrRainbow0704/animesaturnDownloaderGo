@@ -11,7 +11,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/MrRainbow0704/animesaturnDownloaderGo/config"
+	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/config"
 	log "github.com/MrRainbow0704/animesaturnDownloaderGo/internal/logger"
 )
 
@@ -69,12 +69,12 @@ func Key(v ...any) cacheKey {
 	return key
 }
 
-func Init() {
+func Init(local bool) {
 	if NoCachce {
 		return
 	}
 
-	if userCache, err := os.UserCacheDir(); err != nil {
+	if userCache, err := os.UserCacheDir(); err != nil || local {
 		CacheDir = "./.cache"
 	} else {
 		CacheDir = filepath.Join(userCache, "animesaturn-downloader/.cache")

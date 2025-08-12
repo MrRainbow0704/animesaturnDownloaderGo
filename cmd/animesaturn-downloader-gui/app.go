@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/MrRainbow0704/animesaturnDownloaderGo/config"
 	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/cache"
+	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/config"
 	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/helper"
 	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/logger"
 
@@ -24,14 +24,14 @@ type App struct {
 
 // startup is called when the app starts. The context is saved
 // so we can call the runtime methods
-func (a *App) startup(ctx context.Context) {
+func (a *App) startup(ctx context.Context, localConfig, localCache bool) {
 	a.ctx = ctx
 	appLogger.SetContext(&ctx)
-	config.Init()
+	config.Init(localConfig)
 	logger.Verbose = config.Verbose()
 	helper.BaseURL = config.BaseURL()
 	cache.NoCachce = config.NoCache()
-	cache.Init()
+	cache.Init(localCache)
 
 	wails.LogInfo(a.ctx, "Inizializzando la sessione...\n")
 	a.client = helper.NewClient()

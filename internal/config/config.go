@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"time"
 
 	log "github.com/MrRainbow0704/animesaturnDownloaderGo/internal/logger"
@@ -26,9 +27,20 @@ var c = config{
 	CacheMaxTime:  int(time.Hour * 24),
 }
 
-const configPath string = "./config.json"
+var configPath string
+var configDir string
 
-func Init() {
+func Init(local bool) {
+	if userConfig, err := os.UserConfigDir(); err != nil || local {
+		configDir = "."
+	} else {
+		configDir = filepath.Join(userConfig, "animesaturn-downloader")
+	}
+	configPath = filepath.Join(configDir, "config.json")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		log.Fatalf("Impossibile creare la directory per la cache: %s", err)
+	}
+
 	f, err := os.Open(configPath)
 	if errors.Is(err, fs.ErrNotExist) {
 		f, err = os.Create(configPath)
