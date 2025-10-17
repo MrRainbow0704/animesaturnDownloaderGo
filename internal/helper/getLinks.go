@@ -245,11 +245,11 @@ func GetAnimeInfo(c *http.Client, u string) (AnimeInfo, error) {
 		}
 	}
 	tags := strings.Split(
-		strings.TrimSpace(doc.Find(".margin-anime-page:nth-child(2)>:nth-last-child(3)").Text()),
+		strings.TrimSpace(doc.Find(".margin-anime-page:nth-child(2)>:nth-last-child(4)").Text()),
 		"\n",
 	)
 	hentai := false
-	if doc.Find(".margin-anime-page:nth-child(2)>div").Length() == 6 {
+	if doc.Find(".margin-anime-page:nth-child(2)>div").Length() == 7 {
 		hentai = true
 	}
 	for i, t := range tags {

@@ -38,7 +38,7 @@ mac:
 
 linux-cli: export GOOS=linux
 linux-cli: export GOARCH=amd64
-linux-cli: 
+linux-cli:
 	go build -o $(END_DIR)/$(NAME)-$(VERSION)-linux $(LDFLAGS) $(SRC_DIR)
 
 linux-gui: export GOOS=linux

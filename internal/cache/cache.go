@@ -28,21 +28,25 @@ type cacheKey string
 func (c cacheKey) File() string {
 	return file(c.String())
 }
+
 func (c cacheKey) String() string {
 	return string(c)
 }
+
 func (c cacheKey) Set(v any) error {
 	if NoCachce {
 		return nil
 	}
 	return set(c.File(), v)
 }
+
 func (c cacheKey) Get(v any) error {
 	if NoCachce {
 		return errors.New("--no-cache is enabled")
 	}
 	return get(c.File(), v)
 }
+
 func (c cacheKey) Del() error {
 	if NoCachce {
 		return nil
@@ -50,6 +54,8 @@ func (c cacheKey) Del() error {
 	return del(c.File())
 }
 
+// Restituisce una cacheKey unica. Si basa sul nome della funzione che la chiama
+// e su gli elementi passati a v
 func Key(v ...any) cacheKey {
 	if NoCachce {
 		return ""
@@ -64,7 +70,6 @@ func Key(v ...any) cacheKey {
 	}
 
 	key := cacheKey(fmt.Sprintf("%x", sha256.Sum256(fmt.Appendf([]byte{}, "%s(%#+v)", f.Name(), v))))
-	checkAge(key.File())
 	cleaner()
 	return key
 }
@@ -85,11 +90,12 @@ func Init(local bool) {
 	}
 }
 
+// Cancella file con età maggiore di [MaxTime]
 func checkAge(n string) error {
 	info, err := os.Stat(n)
 	if errors.Is(err, fs.ErrNotExist) {
-		log.Infof("il file di cache non esiste, verrà creato: %s", n)
-		return nil
+		log.Infof("il file di cache non esiste: %s", n)
+		return err
 	} else if err != nil {
 		log.Errorf("Impossibile ottenere le informazioni sul file di cache: %s", err)
 		return err
@@ -100,6 +106,8 @@ func checkAge(n string) error {
 	return nil
 }
 
+// Pulisce i file della cache non usati da tempo e elimina i file più vecchi finché
+// non sono di nuovo sotto [MaxItems]
 func cleaner() error {
 	fs, err := os.ReadDir(CacheDir)
 	if err != nil {
@@ -107,20 +115,20 @@ func cleaner() error {
 		return err
 	}
 	for _, f := range fs {
-		if i, err := f.Info(); err == nil && time.Since(i.ModTime()) >= MaxTime {
-			del(i.Name())
+		if err := checkAge(f.Name()); err != nil {
+			return err
 		}
 	}
 
 	for len(fs) >= MaxItems {
-		if err := os.Remove(oldest()); err != nil {
-			log.Fatalf("Impossibile rimuovere il file di cache: %s", err)
+		if err := del(oldest()); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
+// Restituisce il più vecchio dei file dentro [CacheDir]
 func oldest() string {
 	fs, err := os.ReadDir(CacheDir)
 	if err != nil {
@@ -143,6 +151,7 @@ func oldest() string {
 	return oldestFile.Name()
 }
 
+// Inserisce all'interno del file il contenuto di v
 func set(n string, v any) error {
 	f, err := os.Create(n)
 	if errors.Is(err, fs.ErrExist) {
@@ -161,6 +170,7 @@ func set(n string, v any) error {
 	return nil
 }
 
+// Inserisce il contenuto del file all'interno di v
 func get(n string, v any) error {
 	f, err := os.Open(n)
 	if err != nil {
@@ -175,6 +185,7 @@ func get(n string, v any) error {
 	return nil
 }
 
+// Cancella il file
 func del(n string) error {
 	if err := os.Remove(n); err != nil {
 		log.Fatalf("Impossibile rimuovere il file di cache: %s", err)
@@ -183,6 +194,7 @@ func del(n string) error {
 	return nil
 }
 
+// Restituisce il percorso del file
 func file(n string) string {
 	return filepath.Join(CacheDir, n+".CACHE")
 }
