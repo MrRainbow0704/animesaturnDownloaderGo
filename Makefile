@@ -10,31 +10,17 @@ LDFLAGS := -ldflags="-X '$(PACKAGE)/internal/version.version=$(VERSION)'"
 
 .PHONY: all cli gui linux win mac linux-cli linux-gui win-cli win-gui mac-cli mac-gui clean
 
-all:
-	$(MAKE) cli
-	$(MAKE) gui
+all: cli gui
 
-cli:
-	$(MAKE) linux-cli
-	$(MAKE) win-cli
-	$(MAKE) mac-cli
+cli: linux-cli win-cli mac-cli
 
-gui:
-	$(MAKE) linux-gui
-	$(MAKE) win-gui
-	$(MAKE) mac-gui
+gui: linux-gui win-gui mac-gui
 
-linux:
-	$(MAKE) linux-cli
-	$(MAKE) linux-gui
+linux: linux-cli linux-gui
 
-win:
-	$(MAKE) win-cli
-	$(MAKE) win-gui
+win: win-cli win-gui
 
-mac:
-	$(MAKE) mac-cli
-	$(MAKE) mac-gui
+mac: mac-cli mac-gui
 
 linux-cli: export GOOS=linux
 linux-cli: export GOARCH=amd64
