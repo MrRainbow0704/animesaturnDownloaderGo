@@ -41,13 +41,13 @@ func main() {
 	searchCommand := flag.NewFlagSet("search", flag.ExitOnError)
 
 	flag.Usage = func() {
-		log.Print(header + `Questa schermata di aiuto è divisa in più parti, usa "`+execName+` <sottocomando> -h" per vedere la schermata di aiuto per il sottocomando specifico.
+		log.Print(header + `Questa schermata di aiuto è divisa in più parti, usa "` + execName + ` <sottocomando> -h" per vedere la schermata di aiuto per il sottocomando specifico.
 
 I sottocomandi disponibili sono:
   download		Scarica gli episodi di un anime
   search		Cerca un anime per nome
 
-Utilizzo: `+execName+` <sottocomando> [opzioni]
+Utilizzo: ` + execName + ` <sottocomando> [opzioni]
 
 Flag globali:
   -h, --help		stampa le informazioni di aiuto
@@ -60,7 +60,7 @@ Flag globali:
 	downloadCommand.Usage = func() {
 		log.Print(header + `Schermata di aiuto per il sottocomando "download".
 
-Utilizzo: `+execName+` download -u <url> -n <file> [-v] [-d <percorso>] [-f <numero>] [-l <numero>] [-w <numero>]
+Utilizzo: ` + execName + ` download -u <url> -n <file> [-v] [-d <percorso>] [-f <numero>] [-l <numero>] [-w <numero>]
 
 Flag per il sottocomando "download":
   -u, --url <url>		link alla pagina dell'anime		[obbligatorio]
@@ -74,10 +74,10 @@ Flag per il sottocomando "download":
 	searchCommand.Usage = func() {
 		log.Print(header + `Schermata di aiuto per il sottocomando "search".
 
-Utilizzo: `+execName+` search -s <search>
+Utilizzo: ` + execName + ` search -s <stringa> [-p <numero>] [--base-url <url>]
 
 Flag per il sottocomando "search":
-  -s, --search <search>		nome dell'anime da cercare		[obbligatorio]
+  -s, --search <stringa>		nome dell'anime da cercare		[obbligatorio]
   -p, --page <numero>		pagina da cercare. 0 => tutte		[default: 0]
   --base-url <url>		url alla home di animesaturn		[obbligatorio]
 `)
@@ -144,7 +144,7 @@ Flag per il sottocomando "search":
 		}
 	}
 	if len(args) < 2 {
-		log.Fatal("Nessun sottocomando specificato.\nUsa \""+execName+" -h\" per vedere la schermata di aiuto.")
+		log.Fatal("Nessun sottocomando specificato.\nUsa \"" + execName + " -h\" per vedere la schermata di aiuto.")
 		return
 	}
 
@@ -335,7 +335,7 @@ func runSearch(search string, page uint) {
 	log.Infof("Trovati %d anime che corrispondono alla ricerca.\n", len(anime))
 
 	for _, a := range anime {
-		log.Printf("Titolo: %s\n", a.Title)
-		log.Printf("Url: %s\n", a.Url)
+		log.Printf("%s\n", a.Title)
+		log.Printf("  Url: %s\n", a.Url)
 	}
 }

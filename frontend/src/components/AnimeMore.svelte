@@ -36,7 +36,7 @@ let workers: number = $derived(maxWorkers < 3 ? maxWorkers : 3);
 
 let downloadStatus: string = $state("");
 function download(): void {
-	if (primo > ultimo) {
+	if (parseInt(primo) > parseInt(ultimo)) {
 		notifications.error(
 			"Il primo episodio da scaricare non può essere prima dell'ultimo!",
 			3000
