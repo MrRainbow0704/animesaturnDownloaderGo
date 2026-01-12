@@ -62,7 +62,7 @@ func downloadSegment(c *http.Client, out *os.File, seg *segment) error {
 
 func Downloader_mp4(c *http.Client, path string, filename string, jobs <-chan IndexedUrl) {
 	for j := range jobs {
-		name := filepath.Join(path, filename+strconv.Itoa(j.Index)+".mp4")
+		name := filepath.Join(path, filename+" Episodio "+strconv.Itoa(j.Index)+".mp4")
 		out, err := os.Create(name)
 		if err != nil {
 			log.Errorf("La creazione del file `%s` ha prodotto un errore: %s\n", out.Name(), err)
@@ -71,17 +71,17 @@ func Downloader_mp4(c *http.Client, path string, filename string, jobs <-chan In
 		defer out.Close()
 
 		startTime := time.Now()
-		log.Printf("Inizio download di `%s`...\n", filename+strconv.Itoa(j.Index)+".mp4")
+		log.Printf("Inizio download di `%s`...\n", filename+" Episodio "+strconv.Itoa(j.Index)+".mp4")
 		if err := downloadFile(c, out, j.Url); err != nil {
 			log.Fatalf("Errore durante il download del file `%s`: %s\n", name, err)
 		}
-		log.Printf("Finito di scaricare `%s` in %s.\n", filename+strconv.Itoa(j.Index)+".mp4", time.Since(startTime).String())
+		log.Printf("Finito di scaricare `%s` in %s.\n", filename+" Episodio "+strconv.Itoa(j.Index)+".mp4", time.Since(startTime).String())
 	}
 }
 
 func Downloader_m3u8(c *http.Client, path string, filename string, jobs <-chan IndexedUrl) {
 	for j := range jobs {
-		name := filepath.Join(path, filename+strconv.Itoa(j.Index)+".mp4")
+		name := filepath.Join(path, filename+" Episodio "+strconv.Itoa(j.Index)+".mp4")
 		out, err := os.Create(name)
 		if err != nil {
 			log.Errorf("La creazione del file `%s` ha prodotto un errore: %s\n", out.Name(), err)
@@ -91,7 +91,7 @@ func Downloader_m3u8(c *http.Client, path string, filename string, jobs <-chan I
 
 		segs := make(chan *segment)
 		startTime := time.Now()
-		log.Printf("Inizio download di `%s`...\n", filename+strconv.Itoa(j.Index)+".mp4")
+		log.Printf("Inizio download di `%s`...\n", filename+" Episodio "+strconv.Itoa(j.Index)+".mp4")
 		go getPlaylist(c, j.Url, segs)
 		for s := range segs {
 			log.Infof("%#+v", s)
@@ -99,7 +99,7 @@ func Downloader_m3u8(c *http.Client, path string, filename string, jobs <-chan I
 				log.Fatalf("Errore durante il download del segmento `%s` nel file `%s`: %s\n", s.Url, name, err)
 			}
 		}
-		log.Printf("Finito di scaricare `%s` in %s.\n", filename+strconv.Itoa(j.Index)+".mp4", time.Since(startTime).String())
+		log.Printf("Finito di scaricare `%s` in %s.\n", filename+" Episodio "+strconv.Itoa(j.Index)+".mp4", time.Since(startTime).String())
 	}
 }
 
