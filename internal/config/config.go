@@ -17,6 +17,7 @@ type config struct {
 	BaseURL       string `json:"base_url"`
 	CacheMaxItems int    `json:"cache_max_items"`
 	CacheMaxTime  int    `json:"cache_max_time"`
+	MaxRetry      int    `json:"max_retry"`
 }
 
 var c = config{
@@ -25,6 +26,7 @@ var c = config{
 	NoCache:       false,
 	CacheMaxItems: 500,
 	CacheMaxTime:  int(time.Hour * 24),
+	MaxRetry:      5,
 }
 
 var configPath string
@@ -77,6 +79,9 @@ func CacheMaxItems() int {
 }
 func CacheMaxTime() time.Duration {
 	return time.Duration(c.CacheMaxTime)
+}
+func MaxRetry() int {
+	return c.MaxRetry
 }
 
 func SetVerbose(v bool) error {
@@ -143,6 +148,20 @@ func SetCacheMaxTime(v time.Duration) error {
 	defer f.Close()
 
 	c.CacheMaxTime = int(v)
+	err = json.NewEncoder(f).Encode(c)
+	if err != nil {
+		log.Fatalf("Impossible decifrare il file di configurazione: %s", err)
+	}
+	return nil
+}
+func SetMaxRetry(v int) error {
+	f, err := os.Open(configPath)
+	if err != nil {
+		log.Fatalf("Impossible caricare il file di configurazione: %s", err)
+	}
+	defer f.Close()
+
+	c.CacheMaxTime = v
 	err = json.NewEncoder(f).Encode(c)
 	if err != nil {
 		log.Fatalf("Impossible decifrare il file di configurazione: %s", err)

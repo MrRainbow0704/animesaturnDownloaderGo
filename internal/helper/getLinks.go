@@ -23,9 +23,8 @@ func GetEpisodeLinks(c *http.Client, u string) ([]string, error) {
 		return links, nil
 	}
 
-	req, _ := http.NewRequest("GET", u, nil)
-	res, err := c.Do(req)
-	if err != nil || res.StatusCode != 200 {
+	res, err := SendRequest(c, "GET", u)
+	if err != nil {
 		log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res.StatusCode)
 		return nil, err
 	}
@@ -58,9 +57,8 @@ func GetStreamLink(c *http.Client, u string, i int) (IndexedUrl, error) {
 		return iurl, nil
 	}
 
-	req, _ := http.NewRequest("GET", u, nil)
-	res, err := c.Do(req)
-	if err != nil || res.StatusCode != 200 {
+	res, err := SendRequest(c, "GET", u)
+	if err != nil {
 		log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res.StatusCode)
 		return IndexedUrl{}, err
 	}
@@ -90,9 +88,8 @@ func GetVideoLink(c *http.Client, u string, i int) (IndexedUrl, error) {
 		return iurl, nil
 	}
 
-	req, _ := http.NewRequest("GET", u, nil)
-	res, err := c.Do(req)
-	if err != nil || res.StatusCode != 200 {
+	res, err := SendRequest(c, "GET", u)
+	if err != nil {
 		log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res.StatusCode)
 		return IndexedUrl{}, err
 	}
@@ -165,9 +162,8 @@ func GetSearchResults(c *http.Client, s string, p uint) ([]Anime, error) {
 	}
 
 	u := fmt.Sprintf(BaseURL+"/animelist?search=%s&page=%d", url.PathEscape(s), p)
-	req, _ := http.NewRequest("GET", u, nil)
-	res, err := c.Do(req)
-	if err != nil || res.StatusCode != 200 {
+	res, err := SendRequest(c, "GET", u)
+	if err != nil {
 		log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res.StatusCode)
 		return nil, err
 	}
@@ -204,9 +200,8 @@ func GetAnimeInfo(c *http.Client, u string) (AnimeInfo, error) {
 		return info, nil
 	}
 
-	req, _ := http.NewRequest("GET", u, nil)
-	res, err := c.Do(req)
-	if err != nil || res.StatusCode != 200 {
+	res, err := SendRequest(c, "GET", u)
+	if err != nil {
 		log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res.StatusCode)
 		return AnimeInfo{}, err
 	}
@@ -285,9 +280,8 @@ func GetDefaultAnime(c *http.Client) ([]Anime, error) {
 		return anime, nil
 	}
 
-	req, _ := http.NewRequest("GET", BaseURL, nil)
-	res, err := c.Do(req)
-	if err != nil || res.StatusCode != 200 {
+	res, err := SendRequest(c, "GET", BaseURL)
+	if err != nil {
 		log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res.StatusCode)
 		return nil, err
 	}
@@ -304,9 +298,8 @@ func GetDefaultAnime(c *http.Client) ([]Anime, error) {
 			return
 		}
 		href = BaseURL + href
-		req1, _ := http.NewRequest("GET", href, nil)
-		res1, err := c.Do(req1)
-		if err != nil || res1.StatusCode != 200 {
+		res1, err := SendRequest(c, "GET", href)
+		if err != nil {
 			log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res.StatusCode)
 			return
 		}
@@ -338,9 +331,8 @@ func GetPageNumber(c *http.Client, s string) (uint, error) {
 	}
 
 	u := fmt.Sprintf(BaseURL+"/animelist?search=%s", url.PathEscape(s))
-	req, _ := http.NewRequest("GET", u, nil)
-	res, err := c.Do(req)
-	if err != nil || res.StatusCode != 200 {
+	res, err := SendRequest(c, "GET", u)
+	if err != nil {
 		log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res.StatusCode)
 		return 0, err
 	}

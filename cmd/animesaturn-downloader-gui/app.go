@@ -30,6 +30,7 @@ func (a *App) startup(ctx context.Context, localConfig, localCache bool) {
 	config.Init(localConfig)
 	logger.Verbose = config.Verbose()
 	helper.BaseURL = config.BaseURL()
+	helper.MaxRetry = config.MaxRetry()
 	cache.NoCachce = config.NoCache()
 	cache.Init(localCache)
 

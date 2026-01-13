@@ -16,9 +16,8 @@ import (
 
 func downloadFile(c *http.Client, out *os.File, url string) error {
 	// Get the data
-	req, _ := http.NewRequest("GET", url, nil)
-	res, err := c.Do(req)
-	if err != nil || res.StatusCode != 200 {
+	res, err := SendRequest(c, "GET", url)
+	if err != nil {
 		log.Errorf("La richiesta HTTP ha prodotto un errore: %s\n", err)
 		return err
 	}
@@ -39,9 +38,8 @@ func downloadFile(c *http.Client, out *os.File, url string) error {
 
 func downloadSegment(c *http.Client, out *os.File, seg *segment) error {
 	// Get the data
-	req, _ := http.NewRequest("GET", seg.Url, nil)
-	res, err := c.Do(req)
-	if err != nil || res.StatusCode != 200 {
+	res, err := SendRequest(c, "GET", seg.Url)
+	if err != nil {
 		log.Errorf("La richiesta HTTP ha prodotto un errore: %s\n", err)
 		return err
 	}
@@ -109,8 +107,7 @@ func getPlaylist(c *http.Client, urlStr string, dlc chan<- *segment) {
 		log.Fatal(err)
 		return
 	}
-	req, _ := http.NewRequest("GET", urlStr, nil)
-	res, err := c.Do(req)
+	res, err := SendRequest(c,"GET", urlStr)
 	if err != nil {
 		log.Error(err)
 		return
@@ -152,7 +149,7 @@ func getPlaylist(c *http.Client, urlStr string, dlc chan<- *segment) {
 			s := segment{msURI, v.Duration}
 			dlc <- &s
 		}
-		log.Infof("Segmento %d",i)
+		log.Infof("Segmento %d", i)
 	}
 	log.Info("All done")
 	close(dlc)

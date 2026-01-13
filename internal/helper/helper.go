@@ -1,6 +1,7 @@
 package helper
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -10,7 +11,8 @@ import (
 )
 
 var (
-	BaseURL  = "https://www.animesaturn.cx"
+	BaseURL      = "https://www.animesaturn.cx"
+	MaxRetry int = 3
 	Progress float64
 	Total    float64
 )
@@ -85,9 +87,8 @@ func (pt *passThru) Close() {
 
 func ProgressStart_mp4(c *http.Client, us []IndexedUrl) {
 	for _, u := range us {
-		req, _ := http.NewRequest("HEAD", u.Url, nil)
-		res, err := c.Do(req)
-		if err != nil || res.StatusCode != 200 {
+		res, err := SendRequest(c, "HEAD", u.Url)
+		if err != nil {
 			log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res.StatusCode)
 			return
 		}
@@ -97,8 +98,7 @@ func ProgressStart_mp4(c *http.Client, us []IndexedUrl) {
 
 func ProgressStart_m3u8(c *http.Client, us []IndexedUrl) {
 	for _, u := range us {
-		req, _ := http.NewRequest("GET", u.Url, nil)
-		res, err := c.Do(req)
+		res, err := SendRequest(c, "GET", u.Url)
 		if err != nil {
 			log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res.StatusCode)
 			return
@@ -111,4 +111,28 @@ func ProgressStart_m3u8(c *http.Client, us []IndexedUrl) {
 		defer res.Body.Close()
 		Total += playlist.Duration()
 	}
+}
+
+func sendRequest(c *http.Client, m string, u string, retries int) (*http.Response, error) {
+	req, err := http.NewRequest(m, u, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := c.Do(req)
+	if err != nil {
+		return nil, err
+	} else if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusMultipleChoices {
+		if retries < MaxRetry {
+			log.Errorf("HTTP request failed with status code %d. Retrying... (%d/%d)\n", res.StatusCode, retries+1, MaxRetry)
+			return sendRequest(c, m, u, retries+1)
+		}
+		return res, fmt.Errorf("HTTP request failed with status code %d", res.StatusCode)
+	}
+
+	return res, nil
+}
+
+func SendRequest(c *http.Client, m string, u string) (*http.Response, error) {
+	return sendRequest(c, m, u, 0)
 }

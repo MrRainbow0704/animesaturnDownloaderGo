@@ -50,11 +50,12 @@ I sottocomandi disponibili sono:
 Utilizzo: ` + execName + ` <sottocomando> [opzioni]
 
 Flag globali:
-  -h, --help		stampa le informazioni di aiuto
-  -v, --verbose		stampa altre informazioni di debug
-  -V, --version		stampa la versione del programma e termina il programma
-  --no-cache		non utilizza la cache
-  --local-cache		forza il programma ad utilizzare una cache locale
+  -h, --help			stampa le informazioni di aiuto
+  -v, --verbose			stampa altre informazioni di debug
+  -V, --version			stampa la versione del programma e termina il programma
+  --max-retry <numero>		numero massimo di tentativi per ogni richiesta HTTP	[default: 3]
+  --no-cache			non utilizza la cache
+  --local-cache			forza il programma ad utilizzare una cache locale
 `)
 	}
 	downloadCommand.Usage = func() {
@@ -104,6 +105,9 @@ Flag per il sottocomando "search":
 	flag.BoolVar(&cache.NoCachce, "no-cache", false, "non utilizza la cache")
 	downloadCommand.BoolVar(&cache.NoCachce, "no-cache", false, "non utilizza la cache")
 	searchCommand.BoolVar(&cache.NoCachce, "no-cache", false, "non utilizza la cache")
+	flag.IntVar(&helper.MaxRetry, "max-retry", 3, "numero massimo di tentativi per ogni richiesta HTTP")
+	downloadCommand.IntVar(&helper.MaxRetry, "max-retry", 3, "numero massimo di tentativi per ogni richiesta HTTP")
+	searchCommand.IntVar(&helper.MaxRetry, "max-retry", 3, "numero massimo di tentativi per ogni richiesta HTTP")
 	var link string
 	downloadCommand.StringVar(&link, "url", "", "link alla pagina dell'anime")
 	downloadCommand.StringVar(&link, "u", "", "link alla pagina dell'anime")
