@@ -26,8 +26,8 @@ func main() {
 	app := &App{}
 	opts := &options.App{
 		Title:            "Animesaturn Downlaoder " + version.Get(),
-		Width:            1280,
-		Height:           720,
+		Width:            640,
+		Height:           360,
 		AssetServer:      &assetserver.Options{Assets: frontend.Assets},
 		BackgroundColour: &options.RGBA{R: 18, G: 22, B: 25, A: 1},
 		OnStartup: func(ctx context.Context) {
