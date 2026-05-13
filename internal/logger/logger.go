@@ -1,8 +1,11 @@
 package logger
 
 import (
+	"fmt"
 	"log"
 	"os"
+
+	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/version"
 )
 
 var Verbose bool = false
@@ -58,61 +61,64 @@ func Infof(format string, v ...any) {
 }
 
 func Error(v ...any) {
-	if Verbose {
+	if version.IsDev() {
 		l.SetFlags(log.Ltime | log.Llongfile)
 	} else {
 		l.SetFlags(0)
 	}
 	l.SetPrefix(fgRed.String() + "[ERRORE] ")
-	l.Print(v...)
+	l.Output(2, fmt.Sprint(v...))
 }
 
 func Errorln(v ...any) {
-	if Verbose {
+	if version.IsDev() {
 		l.SetFlags(log.Ltime | log.Llongfile)
 	} else {
 		l.SetFlags(0)
 	}
 	l.SetPrefix(fgRed.String() + "[ERRORE] ")
-	l.Println(v...)
+	l.Output(2, fmt.Sprintln(v...))
 }
 
 func Errorf(format string, v ...any) {
-	if Verbose {
+	if version.IsDev() {
 		l.SetFlags(log.Ltime | log.Llongfile)
 	} else {
 		l.SetFlags(0)
 	}
 	l.SetPrefix(fgRed.String() + "[ERRORE] ")
-	l.Printf(format, v...)
+	l.Output(2, fmt.Sprintf(format, v...))
 }
 
 func Fatal(v ...any) {
-	if Verbose {
+	if version.IsDev() {
 		l.SetFlags(log.Ltime | log.Llongfile)
 	} else {
 		l.SetFlags(0)
 	}
 	l.SetPrefix(fgRedBright.String() + "[CRITICO] ")
-	l.Fatal(v...)
+	l.Output(2, fmt.Sprint(v...))
+	os.Exit(1)
 }
 
 func Fatalln(v ...any) {
-	if Verbose {
+	if version.IsDev() {
 		l.SetFlags(log.Ltime | log.Llongfile)
 	} else {
 		l.SetFlags(0)
 	}
 	l.SetPrefix(fgRedBright.String() + "[CRITICO] ")
-	l.Fatalln(v...)
+	l.Output(2, fmt.Sprintln(v...))
+	os.Exit(1)
 }
 
 func Fatalf(format string, v ...any) {
-	if Verbose {
+	if version.IsDev() {
 		l.SetFlags(log.Ltime | log.Llongfile)
 	} else {
 		l.SetFlags(0)
 	}
 	l.SetPrefix(fgRedBright.String() + "[CRITICO] ")
-	l.Fatalf(format, v...)
+	l.Output(2, fmt.Sprintf(format, v...))
+	os.Exit(1)
 }
