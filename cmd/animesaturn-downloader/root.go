@@ -51,11 +51,11 @@ Flag globali:
 	initSearch()
 }
 
-func parseRoot(arguments []string) {
+func parseRoot(arguments []string) string {
 	flag.Parse()
 
 	if ver {
-		return
+		return ""
 	}
 
 	dashlessArgs := flag.Args()
@@ -76,23 +76,23 @@ func parseRoot(arguments []string) {
 	default:
 		log.Fatalf("Sottocomando `%s` non riconosciuto.\n", subcommand)
 	}
+	return subcommand
 }
 
-func runRoot() {
+func runRoot(subcommand string) {
 	startTime := time.Now()
 	if ver {
 		log.Printf("AnimesaturnDownloaderGo %s", version.Get())
 		return
 	}
-	var dashlessArgs = flag.Args()
 
-	switch dashlessArgs[0] {
+	switch subcommand {
 	case "download":
 		runDownload()
 	case "search":
 		runSearch()
 	default:
-		log.Fatalf("Sottocomando `%s` non riconosciuto.\n", dashlessArgs[0])
+		log.Fatalf("Sottocomando `%s` non riconosciuto.\n", subcommand)
 	}
 	log.Infof("Tempo inpiegato: %s\n", time.Since(startTime).String())
 }

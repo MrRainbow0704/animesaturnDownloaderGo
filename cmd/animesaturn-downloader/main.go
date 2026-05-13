@@ -26,6 +26,6 @@ Scritto in Go da Marco Simone.
 
 func main() {
 	initRoot()
-	parseRoot(os.Args[1:])
-	runRoot()
+	subcmd := parseRoot(os.Args[1:])
+	runRoot(subcmd)
 }
