@@ -143,14 +143,14 @@ func (a *App) DownloadAnime(link string, primo int, ultimo int, filename string,
 
 	if len(m3u8Files) > 0 {
 		// new style downloads
-		helper.ProgressStart_m3u8(a.client, m3u8Files)
+		helper.ProgressStartM3U8(a.client, m3u8Files)
 		jobs := make(chan helper.IndexedUrl, len(m3u8Files))
 		wg := sync.WaitGroup{}
 		for range workers {
 			wg.Add(1)
 			go func(wg *sync.WaitGroup) {
 				defer wg.Done()
-				helper.Downloader_m3u8(a.client, path, filename, jobs)
+				helper.DownloaderM3U8(a.client, path, filename, jobs)
 			}(&wg)
 		}
 
@@ -162,7 +162,7 @@ func (a *App) DownloadAnime(link string, primo int, ultimo int, filename string,
 	}
 	if len(mp4Files) > 0 {
 		// old style downloads
-		helper.ProgressStart_mp4(a.client, mp4Files)
+		helper.ProgressStartMP4(a.client, mp4Files)
 
 		jobs := make(chan helper.IndexedUrl, len(mp4Files))
 		wg := sync.WaitGroup{}
@@ -170,7 +170,7 @@ func (a *App) DownloadAnime(link string, primo int, ultimo int, filename string,
 			wg.Add(1)
 			go func(wg *sync.WaitGroup) {
 				defer wg.Done()
-				helper.Downloader_mp4(a.client, path, filename, jobs)
+				helper.DownloaderMP4(a.client, path, filename, jobs)
 			}(&wg)
 		}
 

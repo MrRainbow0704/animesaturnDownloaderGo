@@ -58,7 +58,7 @@ func downloadSegment(c *http.Client, out *os.File, seg *segment) error {
 	return nil
 }
 
-func Downloader_mp4(c *http.Client, path string, filename string, jobs <-chan IndexedUrl) {
+func DownloaderMP4(c *http.Client, path string, filename string, jobs <-chan IndexedUrl) {
 	for j := range jobs {
 		name := filepath.Join(path, filename+" Episodio "+strconv.Itoa(j.Index)+".mp4")
 		out, err := os.Create(name)
@@ -77,7 +77,7 @@ func Downloader_mp4(c *http.Client, path string, filename string, jobs <-chan In
 	}
 }
 
-func Downloader_m3u8(c *http.Client, path string, filename string, jobs <-chan IndexedUrl) {
+func DownloaderM3U8(c *http.Client, path string, filename string, jobs <-chan IndexedUrl) {
 	for j := range jobs {
 		name := filepath.Join(path, filename+" Episodio "+strconv.Itoa(j.Index)+".mp4")
 		out, err := os.Create(name)
@@ -107,7 +107,7 @@ func getPlaylist(c *http.Client, urlStr string, dlc chan<- *segment) {
 		log.Fatal(err)
 		return
 	}
-	res, err := SendRequest(c,"GET", urlStr)
+	res, err := SendRequest(c, "GET", urlStr)
 	if err != nil {
 		log.Error(err)
 		return

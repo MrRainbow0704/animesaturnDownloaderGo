@@ -1,11 +1,15 @@
 NAME := animesaturn-downloader
 PACKAGE := github.com/MrRainbow0704/animesaturnDownloaderGo
 VERSION := $(file < ./version.txt)
+RELEASE := false
 SRC_DIR := ./cmd/animesaturn-downloader
 SRC_DIR_GUI := ./cmd/animesaturn-downloader-gui
 SRC_DIR_FRONTEND := ./frontend
 END_DIR := ./bin
 END_DIR_GUI := ../../bin
+ifneq ($(RELEASE),true)
+	VERSION := $(VERSION)-dev
+endif
 LDFLAGS := -ldflags="-X '$(PACKAGE)/internal/version.version=$(VERSION)'"
 
 .PHONY: all cli gui linux win mac linux-cli linux-gui win-cli win-gui mac-cli mac-gui clean

@@ -85,7 +85,7 @@ func (pt *passThru) Close() {
 	Total -= pt.Size
 }
 
-func ProgressStart_mp4(c *http.Client, us []IndexedUrl) {
+func ProgressStartMP4(c *http.Client, us []IndexedUrl) {
 	for _, u := range us {
 		res, err := SendRequest(c, "HEAD", u.Url)
 		if err != nil {
@@ -96,7 +96,7 @@ func ProgressStart_mp4(c *http.Client, us []IndexedUrl) {
 	}
 }
 
-func ProgressStart_m3u8(c *http.Client, us []IndexedUrl) {
+func ProgressStartM3U8(c *http.Client, us []IndexedUrl) {
 	for _, u := range us {
 		res, err := SendRequest(c, "GET", u.Url)
 		if err != nil {
