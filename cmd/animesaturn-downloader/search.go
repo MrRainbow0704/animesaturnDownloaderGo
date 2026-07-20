@@ -46,7 +46,7 @@ Flag per il sottocomando "search":
 
 func parseSearch(arguments []string) {
 	searchCommand.Parse(arguments)
-	
+
 	search = strings.TrimSpace(search)
 	if search == "" {
 		log.Fatal("Il flag --search (-s) è obbligatorio")

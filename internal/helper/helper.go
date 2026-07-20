@@ -8,6 +8,7 @@ import (
 
 	log "github.com/MrRainbow0704/animesaturnDownloaderGo/internal/logger"
 	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/version"
+
 	"github.com/etherlabsio/go-m3u8/m3u8"
 )
 

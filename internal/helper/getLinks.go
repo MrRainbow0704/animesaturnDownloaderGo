@@ -1,7 +1,6 @@
 package helper
 
 import (
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
@@ -9,14 +8,14 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/cache"
+	log "github.com/MrRainbow0704/animesaturnDownloaderGo/internal/logger"
+	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/version"
+
 	"github.com/PuerkitoBio/goquery"
 	"github.com/dlclark/regexp2"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
-
-	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/cache"
-	log "github.com/MrRainbow0704/animesaturnDownloaderGo/internal/logger"
-	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/version"
 )
 
 func GetEpisodeLinks(c *http.Client, u string) ([]string, error) {
@@ -88,42 +87,6 @@ func GetStreamLink(c *http.Client, u string, i int) (IndexedUrl, error) {
 	iurl = IndexedUrl{i, link}
 	cKey.Set(iurl)
 	return iurl, nil
-}
-
-// Funzione di decodifica per il link del video. Estratta e convertita in go
-// dalla funzione dec() offuscata nel player del sito.
-func decode(b string, k string) string {
-	/*
-		Originale in JavaScript:
-
-		function dec(b, k) {
-			if (!b) return "";
-			var s = atob(b);
-			var o = "";
-			var	i;
-			k = k || "as";
-				for (i = 0; i < s.length; i++) {
-					o += String.fromCharCode(s.charCodeAt(i) ^ k.charCodeAt(i % k.length));
-				}
-			return o;
-		}
-	*/
-	if b == "" {
-		return ""
-	}
-	s, err := base64.StdEncoding.DecodeString(b)
-	if err != nil {
-		log.Errorf("Errore durante la decodifica base64: %s\n", err)
-		return ""
-	}
-	if k == "" {
-		k = "as"
-	}
-	var o strings.Builder
-	for i := range len(s) {
-		o.WriteString(string(s[i] ^ k[i%len(k)]))
-	}
-	return o.String()
 }
 
 func GetVideoLink(c *http.Client, u string, i int) (IndexedUrl, error) {
