@@ -7,11 +7,12 @@ import (
 	"net/url"
 
 	log "github.com/MrRainbow0704/animesaturnDownloaderGo/internal/logger"
+	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/version"
 	"github.com/etherlabsio/go-m3u8/m3u8"
 )
 
 var (
-	BaseURL      = "https://www.animesaturn.cx"
+	BaseURL      = "https://www.animesaturn.net"
 	MaxRetry int = 3
 	Progress float64
 	Total    float64
@@ -113,26 +114,29 @@ func ProgressStartM3U8(c *http.Client, us []IndexedUrl) {
 	}
 }
 
+var userAgent = "AnimeSaturnDownloaderGo/" + version.Get() + " (+https://github.com/MrRainbow0704/animesaturnDownloaderGo)"
+
 func sendRequest(c *http.Client, m string, u string, retries int) (*http.Response, error) {
 	req, err := http.NewRequest(m, u, nil)
 	if err != nil {
 		return nil, err
 	}
-
+	req.Header.Set("User-Agent", userAgent)
 	res, err := c.Do(req)
 	if err != nil {
 		return nil, err
 	} else if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusMultipleChoices {
 		if retries < MaxRetry {
-			log.Errorf("HTTP request failed with status code %d. Retrying... (%d/%d)\n", res.StatusCode, retries+1, MaxRetry)
+			log.Errorf("La richiesta HTTP è fallita con lo status %d. Riprovando... (%d/%d)\n", res.StatusCode, retries+1, MaxRetry)
 			return sendRequest(c, m, u, retries+1)
 		}
-		return res, fmt.Errorf("HTTP request failed with status code %d", res.StatusCode)
+		return res, fmt.Errorf("La richiesta HTTP è fallita con lo status %d", res.StatusCode)
 	}
 
 	return res, nil
 }
 
 func SendRequest(c *http.Client, m string, u string) (*http.Response, error) {
+	log.Infof("Sending %s request to %s\n", m, u)
 	return sendRequest(c, m, u, 0)
 }

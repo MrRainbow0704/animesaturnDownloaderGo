@@ -1,6 +1,8 @@
 package helper
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -34,15 +36,18 @@ func GetEpisodeLinks(c *http.Client, u string) ([]string, error) {
 		return nil, err
 	}
 	ep0 := false
-	doc.Find("a.bottone-ep").Each(func(i int, s *goquery.Selection) {
+	doc.Find("a.ep-tile").Each(func(i int, s *goquery.Selection) {
 		href, _ := s.Attr("href")
+		if !strings.HasPrefix("http", href) {
+			href = BaseURL + href
+		}
 		links = append(links, href)
 		if strings.Contains(href, "ep-0") {
 			ep0 = true
 		}
 	})
 	if !ep0 {
-		return append([]string{"NO EP 0"}, links...), nil
+		links = append([]string{"NO EP 0"}, links...)
 	}
 
 	cKey.Set(links)
@@ -67,17 +72,54 @@ func GetStreamLink(c *http.Client, u string, i int) (IndexedUrl, error) {
 		log.Errorf("Errore durante il parsing della pagina: %s\n", err)
 		return IndexedUrl{}, err
 	}
-	var link string
-	doc.Find("a").Each(func(i int, s *goquery.Selection) {
-		href, _ := s.Attr("href")
-		if strings.Contains(href, "/watch?") {
-			link = href
-		}
-	})
+	link, ok := doc.Find("a.ept-btn--play").First().Attr("href")
+	if !ok {
+		log.Errorf("Errore durante il parsing del link\n")
+		return IndexedUrl{}, errors.New("errore durante il parsing del link")
+	}
+	if !strings.HasPrefix("http", link) {
+		link = BaseURL + link
+	}
 
 	iurl = IndexedUrl{i, link}
 	cKey.Set(iurl)
 	return iurl, nil
+}
+
+// Funzione di decodifica per il link del video. Estratta e convertita in go
+// dalla funzione dec() offuscata nel player del sito.
+func decode(b string, k string) string {
+	/*
+		Originale in JavaScript:
+
+		function dec(b, k) {
+			if (!b) return "";
+			var s = atob(b);
+			var o = "";
+			var	i;
+			k = k || "as";
+				for (i = 0; i < s.length; i++) {
+					o += String.fromCharCode(s.charCodeAt(i) ^ k.charCodeAt(i % k.length));
+				}
+			return o;
+		}
+	*/
+	if b == "" {
+		return ""
+	}
+	s, err := base64.StdEncoding.DecodeString(b)
+	if err != nil {
+		log.Errorf("Errore durante la decodifica base64: %s\n", err)
+		return ""
+	}
+	if k == "" {
+		k = "as"
+	}
+	var o strings.Builder
+	for i := range len(s) {
+		o.WriteString(string(s[i] ^ k[i%len(k)]))
+	}
+	return o.String()
 }
 
 func GetVideoLink(c *http.Client, u string, i int) (IndexedUrl, error) {
@@ -115,18 +157,47 @@ func GetVideoLink(c *http.Client, u string, i int) (IndexedUrl, error) {
 		}
 	})
 	if link == "" {
-		linkRegexp := regexp2.MustCompile(`(?<=file:\s")(.*\.m3u8)(?=")`, 0)
-		code := doc.Find(".embed-responsive-item>script").Text()
-		if code == "" {
-			log.Info("No pagine.")
-			return IndexedUrl{}, errors.New("impossibile trovare il link")
+		playerURLstr, ok := doc.Find("#watch-iframe").First().Attr("src")
+		if !ok {
+			log.Errorf("Errore durante il parsing del link del player\n")
+			return IndexedUrl{}, errors.New("errore durante il parsing del link del player")
 		}
-		text, err := linkRegexp.FindStringMatch(code)
+		log.Infof("Link del player: %s\n", playerURLstr)
+		playerURL, err := url.Parse(playerURLstr)
 		if err != nil {
-			log.Errorf("Errore durante il parsing dello script: %s\n", err)
+			log.Errorf("Errore durante il parsing dell'URL del player: %s\n", err)
 			return IndexedUrl{}, err
 		}
-		link = text.String()
+
+		path := strings.Split(playerURL.EscapedPath(), "/")
+		i := path[len(path)-1]
+		k := playerURL.Query().Get("token")
+		e, err := strconv.Atoi(playerURL.Query().Get("expires"))
+		if err != nil {
+			log.Errorf("Errore durante la conversione del parametro expires: %s\n", err)
+			return IndexedUrl{}, err
+		}
+
+		var playerResponse struct {
+			D  *string `json:"d"`
+			Ok *bool   `json:"ok"`
+		}
+		genURL := fmt.Sprintf("%s://%s/embed/%s/playlist?token=%s&expires=%d", playerURL.Scheme, playerURL.Host, i, url.QueryEscape(k), e)
+		res1, err := SendRequest(c, "GET", genURL)
+		if err != nil {
+			log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res1.StatusCode)
+			return IndexedUrl{}, err
+		}
+		err = json.NewDecoder(res1.Body).Decode(&playerResponse)
+		if err != nil {
+			log.Errorf("Errore durante la decodifica della risposta JSON: %s\n", err)
+			return IndexedUrl{}, err
+		}
+		if playerResponse.Ok != nil && !*playerResponse.Ok {
+			log.Errorf("La risposta del player non è valida\n")
+			return IndexedUrl{}, errors.New("la risposta del player non è valida")
+		}
+		link = decode(*playerResponse.D, k)
 	}
 
 	iurl = IndexedUrl{i, link}
@@ -161,7 +232,7 @@ func GetSearchResults(c *http.Client, s string, p uint) ([]Anime, error) {
 		return anime, nil
 	}
 
-	u := fmt.Sprintf(BaseURL+"/animelist?search=%s&page=%d", url.PathEscape(s), p)
+	u := fmt.Sprintf(BaseURL+"/filter/%d?key=%s", p, url.PathEscape(s))
 	res, err := SendRequest(c, "GET", u)
 	if err != nil {
 		log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res.StatusCode)
@@ -172,17 +243,24 @@ func GetSearchResults(c *http.Client, s string, p uint) ([]Anime, error) {
 		log.Errorf("Errore durante il parsing della pagina: %s\n", err)
 		return nil, err
 	}
-	doc.Find(".item-archivio").Each(func(i int, s *goquery.Selection) {
-		title := strings.TrimSpace(s.Find(".info-archivio>h3>a").Text())
-		href, ok := s.Find(".info-archivio>h3>a").Attr("href")
+	doc.Find(".ac.group").Each(func(i int, s *goquery.Selection) {
+		title := strings.TrimSpace(s.Find("h3").Text())
+		href, ok := s.Attr("href")
 		if !ok {
 			log.Error("Errore durante il parsing del link.\n")
 			return
 		}
-		poster, ok := s.Find(".locandina-archivio").Attr("src")
+		if !strings.HasPrefix("http", href) {
+			href = BaseURL + href
+		}
+
+		poster, ok := s.Find("img").Attr("src")
 		if !ok {
 			log.Errorf("Errore durante il parsing del poster.\n")
 			return
+		}
+		if !strings.HasPrefix("http", poster) {
+			poster = BaseURL + poster
 		}
 		a := Anime{Title: title, Url: href, Poster: poster}
 		anime = append(anime, a)
@@ -214,7 +292,7 @@ func GetAnimeInfo(c *http.Client, u string) (AnimeInfo, error) {
 	statoReg := regexp2.MustCompile(`(?<=Stato: )(.*)(?=\n)`, 0)
 	episodiReg := regexp2.MustCompile(`(?<=Episodi: )([\d?]*)(?=.*\n)`, 0)
 
-	stats := strings.TrimSpace(doc.Find(".margin-anime-page:nth-child(2)>:nth-child(2)").Text())
+	stats := strings.TrimSpace(doc.Find("aside>:nth-child(4)").Text())
 	studio, err := studioReg.FindStringMatch(stats)
 	if err != nil {
 		log.Errorf("Errore durante il parsing dello studio: %s\n", err)
@@ -240,23 +318,21 @@ func GetAnimeInfo(c *http.Client, u string) (AnimeInfo, error) {
 		}
 	}
 	tags := strings.Split(
-		strings.TrimSpace(doc.Find(".margin-anime-page:nth-child(2)>:nth-last-child(4)").Text()),
+		strings.TrimSpace(doc.Find("header>.ag-genres").Text()),
 		"\n",
 	)
 	hentai := false
-	if doc.Find(".margin-anime-page:nth-child(2)>div").Length() == 7 {
+	if doc.Find(".adult-gate__backdrop").Length() != 0 {
 		hentai = true
 	}
 	for i, t := range tags {
 		tags[i] = strings.TrimSpace(t)
 	}
-	plot := strings.TrimSpace(doc.Find("#full-trama").Text())
+	plot := strings.TrimSpace(doc.Find("section.ag-story>div").Text())
 
 	var epList []string
-	doc.Find("#resultsxd>div>div>div>a").Each(func(i int, s *goquery.Selection) {
-		epList = append(epList,
-			strings.TrimSpace(strings.Split(strings.TrimSpace(s.Text()), " ")[1]),
-		)
+	doc.Find("a.ep-tile").Each(func(i int, s *goquery.Selection) {
+		epList = append(epList, strings.TrimSpace(s.Text()))
 	})
 
 	info = AnimeInfo{
@@ -290,14 +366,16 @@ func GetDefaultAnime(c *http.Client) ([]Anime, error) {
 		log.Errorf("Errore durante il parsing della pagina: %s\n", err)
 		return nil, err
 	}
-	doc.Find(".carousel-caption>a").Each(func(i int, s *goquery.Selection) {
-		title := s.Text()
-		href, ok := s.Attr("href")
+	doc.Find(".swiper-slide>.hero-slide").Each(func(i int, s *goquery.Selection) {
+		title := s.Find("h2").First().Text()
+		href, ok := s.Find(".hero-actions>.hero-btn-info").Attr("href")
 		if !ok {
 			log.Error("Errore durante il parsing del link.\n")
 			return
 		}
-		href = BaseURL + href
+		if !strings.HasPrefix("http", href) {
+			href = BaseURL + href
+		}
 		res1, err := SendRequest(c, "GET", href)
 		if err != nil {
 			log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res.StatusCode)
@@ -308,10 +386,13 @@ func GetDefaultAnime(c *http.Client) ([]Anime, error) {
 			log.Errorf("Errore durante il parsing della pagina: %s\n", err)
 			return
 		}
-		poster, ok := doc1.Find(".cover-anime").Attr("src")
+		poster, ok := doc1.Find(".anime-poster-card>img").Attr("src")
 		if !ok {
 			log.Errorf("Errore durante il parsing del poster.\n")
 			return
+		}
+		if !strings.HasPrefix("http", poster) {
+			poster = BaseURL + poster
 		}
 
 		a := Anime{Title: title, Url: href, Poster: poster}
@@ -330,7 +411,7 @@ func GetPageNumber(c *http.Client, s string) (uint, error) {
 		return pages, nil
 	}
 
-	u := fmt.Sprintf(BaseURL+"/animelist?search=%s", url.PathEscape(s))
+	u := fmt.Sprintf(BaseURL+"/filter?key=%s", url.PathEscape(s))
 	res, err := SendRequest(c, "GET", u)
 	if err != nil {
 		log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res.StatusCode)
@@ -342,18 +423,13 @@ func GetPageNumber(c *http.Client, s string) (uint, error) {
 		return 0, err
 	}
 	var pagine int
-	pageRegexp := regexp2.MustCompile(`(?<=totalPages: )(\d*)(?=,)`, 0)
-	code := doc.Find("body>div>script").Text()
-	if code == "" {
+	text := doc.Find("nav.mt-section a.page-num:nth-last-child(2)").Text()
+	if text == "" {
 		log.Info("No pagine.")
 		return 1, nil
 	}
-	text, err := pageRegexp.FindStringMatch(code)
-	if err != nil {
-		log.Errorf("Errore durante il parsing dello script: %s\n", err)
-		return 0, err
-	}
-	pagine, err = strconv.Atoi(text.String())
+
+	pagine, err = strconv.Atoi(text)
 	if err != nil {
 		log.Errorf("Errore durante la conversione delle pagine: %s", err)
 		return 1, nil

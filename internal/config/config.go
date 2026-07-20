@@ -22,7 +22,7 @@ type config struct {
 
 var c = config{
 	Verbose:       false,
-	BaseURL:       "https://www.animesaturn.cx",
+	BaseURL:       "https://www.animesaturn.net",
 	NoCache:       false,
 	CacheMaxItems: 500,
 	CacheMaxTime:  int(time.Hour * 24),
