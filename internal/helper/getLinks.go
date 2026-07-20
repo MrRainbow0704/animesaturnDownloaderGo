@@ -2,7 +2,6 @@ package helper
 
 import (
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -10,11 +9,14 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/PuerkitoBio/goquery"
+	"github.com/dlclark/regexp2"
+	"github.com/go-rod/rod"
+	"github.com/go-rod/rod/lib/launcher"
+
 	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/cache"
 	log "github.com/MrRainbow0704/animesaturnDownloaderGo/internal/logger"
-	"github.com/PuerkitoBio/goquery"
-
-	"github.com/dlclark/regexp2"
+	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/version"
 )
 
 func GetEpisodeLinks(c *http.Client, u string) ([]string, error) {
@@ -30,6 +32,7 @@ func GetEpisodeLinks(c *http.Client, u string) ([]string, error) {
 		log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res.StatusCode)
 		return nil, err
 	}
+	defer res.Body.Close()
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 	if err != nil {
 		log.Errorf("Errore durante il parsing della pagina: %s\n", err)
@@ -67,6 +70,7 @@ func GetStreamLink(c *http.Client, u string, i int) (IndexedUrl, error) {
 		log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res.StatusCode)
 		return IndexedUrl{}, err
 	}
+	defer res.Body.Close()
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 	if err != nil {
 		log.Errorf("Errore durante il parsing della pagina: %s\n", err)
@@ -135,6 +139,7 @@ func GetVideoLink(c *http.Client, u string, i int) (IndexedUrl, error) {
 		log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res.StatusCode)
 		return IndexedUrl{}, err
 	}
+	defer res.Body.Close()
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 	if err != nil {
 		log.Errorf("Errore durante il parsing della pagina: %s\n", err)
@@ -157,47 +162,31 @@ func GetVideoLink(c *http.Client, u string, i int) (IndexedUrl, error) {
 		}
 	})
 	if link == "" {
-		playerURLstr, ok := doc.Find("#watch-iframe").First().Attr("src")
+		// Il player è offuscato, usa un browser headless per ottenere i link
+		playerURL, ok := doc.Find("#watch-iframe").First().Attr("src")
 		if !ok {
 			log.Errorf("Errore durante il parsing del link del player\n")
 			return IndexedUrl{}, errors.New("errore durante il parsing del link del player")
 		}
-		log.Infof("Link del player: %s\n", playerURLstr)
-		playerURL, err := url.Parse(playerURLstr)
-		if err != nil {
-			log.Errorf("Errore durante il parsing dell'URL del player: %s\n", err)
+		p, _ := launcher.LookPath()
+		u := launcher.New().Bin(p).Leakless(false).Headless(!version.IsDev()).MustLaunch()
+		browser := rod.New().ControlURL(u)
+		if err := browser.Connect(); err != nil {
+			log.Errorf("Errore durante la connessione al browser headless: %s\n", err)
 			return IndexedUrl{}, err
 		}
-
-		path := strings.Split(playerURL.EscapedPath(), "/")
-		i := path[len(path)-1]
-		k := playerURL.Query().Get("token")
-		e, err := strconv.Atoi(playerURL.Query().Get("expires"))
+		video, err := browser.MustPage(playerURL).MustWaitStable().Element("video")
 		if err != nil {
-			log.Errorf("Errore durante la conversione del parametro expires: %s\n", err)
+			log.Errorf("Errore durante l'ottenimento dell'elemento video: %s\n", err)
 			return IndexedUrl{}, err
 		}
-
-		var playerResponse struct {
-			D  *string `json:"d"`
-			Ok *bool   `json:"ok"`
-		}
-		genURL := fmt.Sprintf("%s://%s/embed/%s/playlist?token=%s&expires=%d", playerURL.Scheme, playerURL.Host, i, url.QueryEscape(k), e)
-		res1, err := SendRequest(c, "GET", genURL)
+		linkp, err := video.Attribute("src")
 		if err != nil {
-			log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res1.StatusCode)
+			log.Errorf("Errore durante l'ottenimento dell'attributo src del video: %s\n", err)
 			return IndexedUrl{}, err
 		}
-		err = json.NewDecoder(res1.Body).Decode(&playerResponse)
-		if err != nil {
-			log.Errorf("Errore durante la decodifica della risposta JSON: %s\n", err)
-			return IndexedUrl{}, err
-		}
-		if playerResponse.Ok != nil && !*playerResponse.Ok {
-			log.Errorf("La risposta del player non è valida\n")
-			return IndexedUrl{}, errors.New("la risposta del player non è valida")
-		}
-		link = decode(*playerResponse.D, k)
+		link = *linkp
+		browser.MustClose()
 	}
 
 	iurl = IndexedUrl{i, link}
@@ -238,6 +227,7 @@ func GetSearchResults(c *http.Client, s string, p uint) ([]Anime, error) {
 		log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res.StatusCode)
 		return nil, err
 	}
+	defer res.Body.Close()
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 	if err != nil {
 		log.Errorf("Errore durante il parsing della pagina: %s\n", err)
@@ -283,6 +273,7 @@ func GetAnimeInfo(c *http.Client, u string) (AnimeInfo, error) {
 		log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res.StatusCode)
 		return AnimeInfo{}, err
 	}
+	defer res.Body.Close()
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 	if err != nil {
 		log.Errorf("Errore durante il parsing della pagina: %s\n", err)
@@ -361,6 +352,7 @@ func GetDefaultAnime(c *http.Client) ([]Anime, error) {
 		log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res.StatusCode)
 		return nil, err
 	}
+	defer res.Body.Close()
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 	if err != nil {
 		log.Errorf("Errore durante il parsing della pagina: %s\n", err)
@@ -381,6 +373,7 @@ func GetDefaultAnime(c *http.Client) ([]Anime, error) {
 			log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res.StatusCode)
 			return
 		}
+		defer res1.Body.Close()
 		doc1, err := goquery.NewDocumentFromReader(res1.Body)
 		if err != nil {
 			log.Errorf("Errore durante il parsing della pagina: %s\n", err)
@@ -417,6 +410,7 @@ func GetPageNumber(c *http.Client, s string) (uint, error) {
 		log.Errorf("La richiesta HTTP ha prodotto un errore: %s. Response code: %d\n", err, res.StatusCode)
 		return 0, err
 	}
+	defer res.Body.Close()
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 	if err != nil {
 		log.Errorf("Errore durante il parsing della pagina: %s\n", err)

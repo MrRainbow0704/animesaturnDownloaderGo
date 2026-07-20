@@ -16,18 +16,21 @@ func init() {
 }
 
 func Print(v ...any) {
+	v = append(v, reset.String())
 	l.SetFlags(0)
 	l.SetPrefix(reset.String())
 	l.Print(v...)
 }
 
 func Println(v ...any) {
+	v = append(v, reset.String())
 	l.SetFlags(0)
 	l.SetPrefix(reset.String())
 	l.Println(v...)
 }
 
 func Printf(format string, v ...any) {
+	v = append(v, reset.String())
 	l.SetFlags(0)
 	l.SetPrefix(reset.String())
 	l.Printf(format, v...)
@@ -37,6 +40,7 @@ func Info(v ...any) {
 	if !Verbose {
 		return
 	}
+	v = append(v, reset.String())
 	l.SetFlags(log.Ltime)
 	l.SetPrefix(fgBlueBright.String() + "[INFO] ")
 	l.Print(v...)
@@ -46,6 +50,7 @@ func Infoln(v ...any) {
 	if !Verbose {
 		return
 	}
+	v = append(v, reset.String())
 	l.SetFlags(log.Ltime)
 	l.SetPrefix(fgBlueBright.String() + "[INFO] ")
 	l.Println(v...)
@@ -55,12 +60,14 @@ func Infof(format string, v ...any) {
 	if !Verbose {
 		return
 	}
+	v = append(v, reset.String())
 	l.SetFlags(log.Ltime)
 	l.SetPrefix(fgBlueBright.String() + "[INFO] ")
 	l.Printf(format, v...)
 }
 
 func Error(v ...any) {
+	v = append(v, reset.String())
 	if version.IsDev() {
 		l.SetFlags(log.Ltime | log.Llongfile)
 	} else {
@@ -71,6 +78,7 @@ func Error(v ...any) {
 }
 
 func Errorln(v ...any) {
+	v = append(v, reset.String())
 	if version.IsDev() {
 		l.SetFlags(log.Ltime | log.Llongfile)
 	} else {
@@ -81,6 +89,7 @@ func Errorln(v ...any) {
 }
 
 func Errorf(format string, v ...any) {
+	v = append(v, reset.String())
 	if version.IsDev() {
 		l.SetFlags(log.Ltime | log.Llongfile)
 	} else {
@@ -91,6 +100,7 @@ func Errorf(format string, v ...any) {
 }
 
 func Fatal(v ...any) {
+	v = append(v, reset.String())
 	if version.IsDev() {
 		l.SetFlags(log.Ltime | log.Llongfile)
 	} else {
@@ -102,6 +112,7 @@ func Fatal(v ...any) {
 }
 
 func Fatalln(v ...any) {
+	v = append(v, reset.String())
 	if version.IsDev() {
 		l.SetFlags(log.Ltime | log.Llongfile)
 	} else {
@@ -113,6 +124,7 @@ func Fatalln(v ...any) {
 }
 
 func Fatalf(format string, v ...any) {
+	v = append(v, reset.String())
 	if version.IsDev() {
 		l.SetFlags(log.Ltime | log.Llongfile)
 	} else {

@@ -21,6 +21,7 @@ var (
 	NoCachce bool          = config.NoCache()
 )
 
+var UserDataDir string
 var CacheDir string
 
 type cacheKey string
@@ -81,12 +82,17 @@ func Init(local bool) {
 
 	if userCache, err := os.UserCacheDir(); err != nil || local {
 		CacheDir = "./.cache"
+		UserDataDir = "./.userdata"
 	} else {
 		CacheDir = filepath.Join(userCache, "animesaturn-downloader/.cache")
+		UserDataDir = filepath.Join(userCache, "animesaturn-downloader/.userdata")
 	}
 
 	if err := os.MkdirAll(CacheDir, 0755); err != nil {
 		log.Fatalf("Impossibile creare la directory per la cache: %s", err)
+	}
+	if err := os.MkdirAll(UserDataDir, 0755); err != nil {
+		log.Fatalf("Impossibile creare la directory per la cache del browser: %s", err)
 	}
 }
 

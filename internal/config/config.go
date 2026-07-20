@@ -29,23 +29,23 @@ var c = config{
 	MaxRetry:      5,
 }
 
-var configPath string
-var configDir string
+var ConfigPath string
+var ConfigDir string
 
 func Init(local bool) {
 	if userConfig, err := os.UserConfigDir(); err != nil || local {
-		configDir = "."
+		ConfigDir = "."
 	} else {
-		configDir = filepath.Join(userConfig, "animesaturn-downloader")
+		ConfigDir = filepath.Join(userConfig, "animesaturn-downloader")
 	}
-	configPath = filepath.Join(configDir, "config.json")
-	if err := os.MkdirAll(configDir, 0755); err != nil {
+	ConfigPath = filepath.Join(ConfigDir, "config.json")
+	if err := os.MkdirAll(ConfigDir, 0755); err != nil {
 		log.Fatalf("Impossibile creare la directory per la cache: %s", err)
 	}
 
-	f, err := os.Open(configPath)
+	f, err := os.Open(ConfigPath)
 	if errors.Is(err, fs.ErrNotExist) {
-		f, err = os.Create(configPath)
+		f, err = os.Create(ConfigPath)
 		if err != nil {
 			log.Fatalf("Impossible caricare il file di configurazione: %s", err)
 		}
@@ -85,7 +85,7 @@ func MaxRetry() int {
 }
 
 func SetVerbose(v bool) error {
-	f, err := os.Open(configPath)
+	f, err := os.Open(ConfigPath)
 	if err != nil {
 		log.Fatalf("Impossible caricare il file di configurazione: %s", err)
 	}
@@ -99,7 +99,7 @@ func SetVerbose(v bool) error {
 	return nil
 }
 func SetNoCache(v bool) error {
-	f, err := os.Open(configPath)
+	f, err := os.Open(ConfigPath)
 	if err != nil {
 		log.Fatalf("Impossible caricare il file di configurazione: %s", err)
 	}
@@ -113,7 +113,7 @@ func SetNoCache(v bool) error {
 	return nil
 }
 func SetBaseURL(v string) error {
-	f, err := os.Open(configPath)
+	f, err := os.Open(ConfigPath)
 	if err != nil {
 		log.Fatalf("Impossible caricare il file di configurazione: %s", err)
 	}
@@ -127,7 +127,7 @@ func SetBaseURL(v string) error {
 	return nil
 }
 func SetCacheMaxItems(v int) error {
-	f, err := os.Open(configPath)
+	f, err := os.Open(ConfigPath)
 	if err != nil {
 		log.Fatalf("Impossible caricare il file di configurazione: %s", err)
 	}
@@ -141,7 +141,7 @@ func SetCacheMaxItems(v int) error {
 	return nil
 }
 func SetCacheMaxTime(v time.Duration) error {
-	f, err := os.Open(configPath)
+	f, err := os.Open(ConfigPath)
 	if err != nil {
 		log.Fatalf("Impossible caricare il file di configurazione: %s", err)
 	}
@@ -155,7 +155,7 @@ func SetCacheMaxTime(v time.Duration) error {
 	return nil
 }
 func SetMaxRetry(v int) error {
-	f, err := os.Open(configPath)
+	f, err := os.Open(ConfigPath)
 	if err != nil {
 		log.Fatalf("Impossible caricare il file di configurazione: %s", err)
 	}
