@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/cache"
+	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/config"
 	log "github.com/MrRainbow0704/animesaturnDownloaderGo/internal/logger"
-	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/version"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/dlclark/regexp2"
@@ -132,7 +132,7 @@ func GetVideoLink(c *http.Client, u string, i int) (IndexedUrl, error) {
 			return IndexedUrl{}, errors.New("errore durante il parsing del link del player")
 		}
 		p, _ := launcher.LookPath()
-		u := launcher.New().Bin(p).Leakless(false).Headless(!version.IsDev()).MustLaunch()
+		u := launcher.New().Bin(p).Leakless(false).Headless(!config.Verbose()).MustLaunch()
 		browser := rod.New().ControlURL(u)
 		if err := browser.Connect(); err != nil {
 			log.Errorf("Errore durante la connessione al browser headless: %s\n", err)
