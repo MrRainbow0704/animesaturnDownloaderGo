@@ -52,7 +52,7 @@ onMount(defaultSearch);
 <main>
 	<header>
 		<h1>
-			Anime<span style="color: var(--accent);">Saturn</span> Downlader
+			Anime<span style="color: var(--accent);">Saturn</span> Downloader
 		</h1>
 		<p>
 			Creato da <a

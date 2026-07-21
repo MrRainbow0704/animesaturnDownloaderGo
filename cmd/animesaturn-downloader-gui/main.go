@@ -25,7 +25,7 @@ func main() {
 
 	app := &App{}
 	opts := &options.App{
-		Title:            "Animesaturn Downlaoder " + version.Get(),
+		Title:            "Animesaturn Downloader " + version.Get(),
 		Width:            640,
 		Height:           360,
 		AssetServer:      &assetserver.Options{Assets: frontend.Assets},
