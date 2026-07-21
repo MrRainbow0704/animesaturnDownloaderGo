@@ -40,7 +40,7 @@ func GetEpisodeLinks(c *http.Client, u string) ([]string, error) {
 	ep0 := false
 	doc.Find("a.ep-tile").Each(func(i int, s *goquery.Selection) {
 		href, _ := s.Attr("href")
-		if !strings.HasPrefix("http", href) {
+		if !strings.HasPrefix(href, "http") {
 			href = BaseURL + href
 		}
 		links = append(links, href)
@@ -80,7 +80,7 @@ func GetStreamLink(c *http.Client, u string, i int) (IndexedUrl, error) {
 		log.Errorf("Errore durante il parsing del link\n")
 		return IndexedUrl{}, errors.New("errore durante il parsing del link")
 	}
-	if !strings.HasPrefix("http", link) {
+	if !strings.HasPrefix(link, "http") {
 		link = BaseURL + link
 	}
 
@@ -203,7 +203,7 @@ func GetSearchResults(c *http.Client, s string, p uint) ([]Anime, error) {
 			log.Error("Errore durante il parsing del link.\n")
 			return
 		}
-		if !strings.HasPrefix("http", href) {
+		if !strings.HasPrefix(href, "http") {
 			href = BaseURL + href
 		}
 
@@ -212,7 +212,7 @@ func GetSearchResults(c *http.Client, s string, p uint) ([]Anime, error) {
 			log.Errorf("Errore durante il parsing del poster.\n")
 			return
 		}
-		if !strings.HasPrefix("http", poster) {
+		if !strings.HasPrefix(poster, "http") {
 			poster = BaseURL + poster
 		}
 		a := Anime{Title: title, Url: href, Poster: poster}
@@ -242,11 +242,15 @@ func GetAnimeInfo(c *http.Client, u string) (AnimeInfo, error) {
 		log.Errorf("Errore durante il parsing della pagina: %s\n", err)
 		return AnimeInfo{}, err
 	}
-	studioReg := regexp2.MustCompile(`(?<=Studio: )(.*)(?=\n)`, 0)
-	statoReg := regexp2.MustCompile(`(?<=Stato: )(.*)(?=\n)`, 0)
-	episodiReg := regexp2.MustCompile(`(?<=Episodi: )([\d?]*)(?=.*\n)`, 0)
+	studioReg := regexp2.MustCompile(`(?<=Studio)(.*)(?=\n)`, 0)
+	statoReg := regexp2.MustCompile(`(?<=Stato)(.*)(?=\n)`, 0)
+	episodiReg := regexp2.MustCompile(`(?<=Episodi)([ \d?]*)(?=.*\n)`, 0)
 
-	stats := strings.TrimSpace(doc.Find("aside>:nth-child(4)").Text())
+	var statsSplit []string
+	doc.Find("aside>:nth-child(4)").ChildrenFiltered("a,div").Each(func(i int, s *goquery.Selection) {
+		statsSplit = append(statsSplit, strings.ReplaceAll(strings.TrimSpace(s.Text()), "\n", ""))
+	})
+	stats := strings.Join(statsSplit, "\n")
 	studio, err := studioReg.FindStringMatch(stats)
 	if err != nil {
 		log.Errorf("Errore durante il parsing dello studio: %s\n", err)
@@ -262,7 +266,7 @@ func GetAnimeInfo(c *http.Client, u string) (AnimeInfo, error) {
 		log.Errorf("Errore durante il parsing del numero di episodi: %s\n", err)
 		return AnimeInfo{}, err
 	}
-	nEspsStr := eps.Capture.String()
+	nEspsStr := strings.TrimSpace(eps.Capture.String())
 	nEps := 0
 	if !strings.Contains(nEspsStr, "?") {
 		nEps, err = strconv.Atoi(nEspsStr)
@@ -292,8 +296,8 @@ func GetAnimeInfo(c *http.Client, u string) (AnimeInfo, error) {
 	info = AnimeInfo{
 		EpisodeCount: nEps,
 		Tags:         tags,
-		Studio:       studio.Capture.String(),
-		Status:       status.Capture.String(),
+		Studio:       strings.TrimSpace(studio.Capture.String()),
+		Status:       strings.TrimSpace(status.Capture.String()),
 		Plot:         plot,
 		EpisodesList: epList,
 		Is18plus:     hentai,
@@ -328,7 +332,7 @@ func GetDefaultAnime(c *http.Client) ([]Anime, error) {
 			log.Error("Errore durante il parsing del link.\n")
 			return
 		}
-		if !strings.HasPrefix("http", href) {
+		if !strings.HasPrefix(href, "http") {
 			href = BaseURL + href
 		}
 		res1, err := SendRequest(c, "GET", href)
@@ -347,7 +351,7 @@ func GetDefaultAnime(c *http.Client) ([]Anime, error) {
 			log.Errorf("Errore durante il parsing del poster.\n")
 			return
 		}
-		if !strings.HasPrefix("http", poster) {
+		if !strings.HasPrefix(poster, "http") {
 			poster = BaseURL + poster
 		}
 
