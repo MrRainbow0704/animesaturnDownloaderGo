@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/cache"
-	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/config"
 	log "github.com/MrRainbow0704/animesaturnDownloaderGo/internal/logger"
 
 	"github.com/PuerkitoBio/goquery"
@@ -126,19 +125,20 @@ func GetVideoLink(c *http.Client, u string, i int) (IndexedUrl, error) {
 	})
 	if link == "" {
 		// Il player è offuscato, usa un browser headless per ottenere i link
+		log.Info("Il player è offuscato, provando metodo alternativo...")
 		playerURL, ok := doc.Find("#watch-iframe").First().Attr("src")
 		if !ok {
 			log.Errorf("Errore durante il parsing del link del player\n")
 			return IndexedUrl{}, errors.New("errore durante il parsing del link del player")
 		}
-		p, _ := launcher.LookPath()
-		u := launcher.New().Bin(p).Leakless(false).Headless(!config.Verbose()).MustLaunch()
-		browser := rod.New().ControlURL(u)
-		if err := browser.Connect(); err != nil {
-			log.Errorf("Errore durante la connessione al browser headless: %s\n", err)
-			return IndexedUrl{}, err
+		p, found := launcher.LookPath()
+		if !found {
+			log.Errorf("Errore durante la ricerca del browser headless: %s\n", err)
+			return IndexedUrl{}, errors.New("errore durante la ricerca del browser headless")
 		}
-		video, err := browser.MustPage(playerURL).MustWaitStable().Element("video")
+		u := launcher.New().Bin(p).Leakless(false).Headless(!log.Verbose).Logger(log.Logger().Writer()).MustLaunch()
+		browser := rod.New().ControlURL(u).MustConnect()
+		video, err := browser.MustPage(playerURL).MustWaitLoad().Element("video")
 		if err != nil {
 			log.Errorf("Errore durante l'ottenimento dell'elemento video: %s\n", err)
 			return IndexedUrl{}, err
