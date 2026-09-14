@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -21,7 +22,7 @@ var (
 
 func initRoot() {
 	flag.Usage = func() {
-		log.Print(header + `Questa schermata di aiuto è divisa in più parti, usa "` + execName + ` <sottocomando> -h" per vedere la schermata di aiuto per il sottocomando specifico.
+		fmt.Print(header + `Questa schermata di aiuto è divisa in più parti, usa "` + execName + ` <sottocomando> -h" per vedere la schermata di aiuto per il sottocomando specifico.
 
 I sottocomandi disponibili sono:
   download		Scarica gli episodi di un anime
@@ -82,7 +83,7 @@ func parseRoot(arguments []string) string {
 func runRoot(subcommand string) {
 	startTime := time.Now()
 	if ver {
-		log.Printf("AnimesaturnDownloaderGo %s", version.Get())
+		fmt.Printf("AnimesaturnDownloaderGo %s", version.Get())
 		return
 	}
 

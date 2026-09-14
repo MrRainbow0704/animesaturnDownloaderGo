@@ -1,6 +1,7 @@
 package helper
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -69,11 +70,11 @@ func DownloaderMP4(c *http.Client, path string, filename string, jobs <-chan Ind
 		defer out.Close()
 
 		startTime := time.Now()
-		log.Printf("Inizio download di `%s`...\n", filename+" Episodio "+strconv.Itoa(j.Index)+".mp4")
+		fmt.Printf("Inizio download di `%s`...\n", filename+" Episodio "+strconv.Itoa(j.Index)+".mp4")
 		if err := downloadFile(c, out, j.Url); err != nil {
 			log.Fatalf("Errore durante il download del file `%s`: %s\n", name, err)
 		}
-		log.Printf("Finito di scaricare `%s` in %s.\n", filename+" Episodio "+strconv.Itoa(j.Index)+".mp4", time.Since(startTime).String())
+		fmt.Printf("Finito di scaricare `%s` in %s.\n", filename+" Episodio "+strconv.Itoa(j.Index)+".mp4", time.Since(startTime).String())
 	}
 }
 
@@ -89,7 +90,7 @@ func DownloaderM3U8(c *http.Client, path string, filename string, jobs <-chan In
 
 		segs := make(chan *segment)
 		startTime := time.Now()
-		log.Printf("Inizio download di `%s`...\n", filename+" Episodio "+strconv.Itoa(j.Index)+".mp4")
+		fmt.Printf("Inizio download di `%s`...\n", filename+" Episodio "+strconv.Itoa(j.Index)+".mp4")
 		go getPlaylist(c, j.Url, segs)
 		for s := range segs {
 			log.Infof("%#+v", s)
@@ -97,7 +98,7 @@ func DownloaderM3U8(c *http.Client, path string, filename string, jobs <-chan In
 				log.Fatalf("Errore durante il download del segmento `%s` nel file `%s`: %s\n", s.Url, name, err)
 			}
 		}
-		log.Printf("Finito di scaricare `%s` in %s.\n", filename+" Episodio "+strconv.Itoa(j.Index)+".mp4", time.Since(startTime).String())
+		fmt.Printf("Finito di scaricare `%s` in %s.\n", filename+" Episodio "+strconv.Itoa(j.Index)+".mp4", time.Since(startTime).String())
 	}
 }
 

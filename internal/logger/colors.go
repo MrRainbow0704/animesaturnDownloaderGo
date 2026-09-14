@@ -1,92 +1,54 @@
 package logger
 
-type color uint
-
-func (c color) String() string {
-	return colorsCodes[c]
-}
-
-var colorsCodes = []string{
-	"\033[0m",
-	"\033[30m",
-	"\033[31m",
-	"\033[32m",
-	"\033[33m",
-	"\033[34m",
-	"\033[35m",
-	"\033[36m",
-	"\033[37m",
-	"\033[39m",
-	"\033[90m",
-	"\033[91m",
-	"\033[92m",
-	"\033[93m",
-	"\033[94m",
-	"\033[95m",
-	"\033[96m",
-	"\033[97m",
-	"\033[40m",
-	"\033[41m",
-	"\033[42m",
-	"\033[43m",
-	"\033[44m",
-	"\033[45m",
-	"\033[46m",
-	"\033[47m",
-	"\033[49m",
-	"\033[100m",
-	"\033[101m",
-	"\033[102m",
-	"\033[103m",
-	"\033[104m",
-	"\033[105m",
-	"\033[106m",
-	"\033[107m",
-}
+type Color string
 
 const (
-	reset color = iota
-	fgBlack
-	fgRed
-	fgGreen
-	fgYellow
-	fgBlue
-	fgMagenta
-	fgCyan
-	fgWhite
-	fgDefault
-	fgBlackBright
-	fgRedBright
-	fgGreenBright
-	fgYellowBright
-	fgBlueBright
-	fgMagentaBright
-	fgCyanBright
-	fgWhiteBright
-	bgBlack
-	bgRed
-	bgGreen
-	bgYellow
-	bgBlue
-	bgMagenta
-	bgCyan
-	bgWhite
-	bgDefault
-	bgBlackBright
-	bgRedBright
-	bgGreenBright
-	bgYellowBright
-	bgBlueBright
-	bgMagentaBright
-	bgCyanBright
-	bgWhiteBright
+	ColorReset           Color = "\033[0m"
+	ColorFgBlack         Color = "\033[30m"
+	ColorFgRed           Color = "\033[31m"
+	ColorFgGreen         Color = "\033[32m"
+	ColorFgYellow        Color = "\033[33m"
+	ColorFgBlue          Color = "\033[34m"
+	ColorFgMagenta       Color = "\033[35m"
+	ColorFgCyan          Color = "\033[36m"
+	ColorFgWhite         Color = "\033[37m"
+	ColorFgDefault       Color = "\033[39m"
+	ColorFgBlackBright   Color = "\033[90m"
+	ColorFgRedBright     Color = "\033[91m"
+	ColorFgGreenBright   Color = "\033[92m"
+	ColorFgYellowBright  Color = "\033[93m"
+	ColorFgBlueBright    Color = "\033[94m"
+	ColorFgMagentaBright Color = "\033[95m"
+	ColorFgCyanBright    Color = "\033[96m"
+	ColorFgWhiteBright   Color = "\033[97m"
+	ColorBgBlack         Color = "\033[40m"
+	ColorBgRed           Color = "\033[41m"
+	ColorBgGreen         Color = "\033[42m"
+	ColorBgYellow        Color = "\033[43m"
+	ColorBgBlue          Color = "\033[44m"
+	ColorBgMagenta       Color = "\033[45m"
+	ColorBgCyan          Color = "\033[46m"
+	ColorBgWhite         Color = "\033[47m"
+	ColorBgDefault       Color = "\033[49m"
+	ColorBgBlackBright   Color = "\033[100m"
+	ColorBgRedBright     Color = "\033[101m"
+	ColorBgGreenBright   Color = "\033[102m"
+	ColorBgYellowBright  Color = "\033[103m"
+	ColorBgBlueBright    Color = "\033[104m"
+	ColorBgMagentaBright Color = "\033[105m"
+	ColorBgCyanBright    Color = "\033[106m"
+	ColorBgWhiteBright   Color = "\033[107m"
 )
 
 // Restituisce una stringa avvolta nei colori selezionati.
-func Colorize(s string, c ...color) string {
-	cs := ""
+func Colorize(s string, c ...Color) string {
+	return ColorizeNoReset(s, c...) + string(ColorReset)
+}
+
+func ColorizeNoReset(s string, c ...Color) string {
+	var cs Color
 	for _, cx := range c {
-		cs = cs + cx.String()
+		cs = cs + cx
 	}
-	return cs + s + reset.String()
+	return string(cs) + s
 }

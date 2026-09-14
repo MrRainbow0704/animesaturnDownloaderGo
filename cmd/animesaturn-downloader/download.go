@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -29,7 +30,7 @@ func initDownload() {
 	cwd, _ = os.Getwd()
 
 	downloadCommand.Usage = func() {
-		log.Print(header + `Schermata di aiuto per il sottocomando "download".
+		fmt.Print(header + `Schermata di aiuto per il sottocomando "download".
 
 Utilizzo: ` + execName + ` download -u <url> -n <file> [-v] [-d <percorso>] [-f <numero>] [-l <numero>] [-w <numero>]
 
@@ -106,7 +107,7 @@ func parseDownload(arguments []string) {
 
 func runDownload() {
 	// Setting up session
-	log.Println("Ottenimento dei file...")
+	fmt.Println("Ottenimento dei file...")
 	log.Infoln("Inizializzando la sessione...")
 	client := helper.NewClient()
 	log.Infoln("Sessione creata!")
@@ -153,9 +154,9 @@ func runDownload() {
 		}
 	}
 	log.Infoln("Link ai file trovati.")
-	log.Println("URL ai video ottenuti.")
+	fmt.Println("URL ai video ottenuti.")
 
-	log.Println("Inizio download...")
+	fmt.Println("Inizio download...")
 	var m3u8Files []helper.IndexedUrl
 	var mp4Files []helper.IndexedUrl
 	for _, link := range videoLinks {
@@ -176,7 +177,7 @@ func runDownload() {
 		downloadMP4(mp4Files, client)
 	}
 
-	log.Println("Download completati.")
+	fmt.Println("Download completati.")
 }
 
 func downloadM3U8(files []helper.IndexedUrl, client *http.Client) {

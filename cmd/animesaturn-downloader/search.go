@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"strings"
 
 	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/cache"
@@ -19,7 +20,7 @@ var (
 
 func initSearch() {
 	searchCommand.Usage = func() {
-		log.Print(header + `Schermata di aiuto per il sottocomando "search".
+		fmt.Print(header + `Schermata di aiuto per il sottocomando "search".
 
 Utilizzo: ` + execName + ` search -s <stringa> [-p <numero>] [--base-url <url>]
 
@@ -73,7 +74,7 @@ func runSearch() {
 	log.Infof("Trovati %d anime che corrispondono alla ricerca.\n", len(anime))
 
 	for _, a := range anime {
-		log.Printf("%s\n", a.Title)
-		log.Printf("  Url: %s\n", a.Url)
+		fmt.Printf("%s\n", a.Title)
+		fmt.Printf("  Url: %s\n", a.Url)
 	}
 }

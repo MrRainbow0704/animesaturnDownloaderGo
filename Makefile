@@ -7,7 +7,7 @@ SRC_DIR_GUI := ./cmd/animesaturn-downloader-gui
 SRC_DIR_FRONTEND := ./frontend
 END_DIR := ./bin
 END_DIR_GUI := ../../bin
-ifneq ($(RELEASE),true)
+ifeq ($(RELEASE),false)
 	VERSION := $(VERSION)-dev
 endif
 LDFLAGS := -ldflags="-X '$(PACKAGE)/internal/version.version=$(VERSION)'"

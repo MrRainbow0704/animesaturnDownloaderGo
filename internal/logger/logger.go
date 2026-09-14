@@ -4,133 +4,127 @@ import (
 	"fmt"
 	"log"
 	"os"
-
-	"github.com/MrRainbow0704/animesaturnDownloaderGo/internal/version"
 )
 
-var Verbose bool = false
-var l *log.Logger
+var (
+	Verbose = false
+	logger  = log.New(os.Stderr, "", 0)
+)
 
-func init() {
-	l = log.New(os.Stdout, "", 0)
+func Logger() *log.Logger {
+	return logger
 }
 
-func Print(v ...any) {
-	v = append(v, reset.String())
-	l.SetFlags(0)
-	l.SetPrefix(reset.String())
-	l.Print(v...)
-}
-
-func Println(v ...any) {
-	v = append(v, reset.String())
-	l.SetFlags(0)
-	l.SetPrefix(reset.String())
-	l.Println(v...)
-}
-
-func Printf(format string, v ...any) {
-	v = append(v, reset.String())
-	l.SetFlags(0)
-	l.SetPrefix(reset.String())
-	l.Printf(format, v...)
-}
-
+// Info logs an informational message with a cyan "[INFO]" prefix.
+// Arguments are handled in the manner of [fmt.Print].
 func Info(v ...any) {
 	if !Verbose {
 		return
 	}
-	v = append(v, reset.String())
-	l.SetFlags(log.Ltime)
-	l.SetPrefix(fgBlueBright.String() + "[INFO] ")
-	l.Print(v...)
+
+	logger.SetPrefix(ColorizeNoReset("[INFO] ", ColorFgCyanBright))
+	logger.Output(2, Colorize(fmt.Sprint(v...), ColorFgCyanBright))
+	logger.SetPrefix("")
 }
 
-func Infoln(v ...any) {
-	if !Verbose {
-		return
-	}
-	v = append(v, reset.String())
-	l.SetFlags(log.Ltime)
-	l.SetPrefix(fgBlueBright.String() + "[INFO] ")
-	l.Println(v...)
-}
-
+// Infof logs a formatted informational message with a cyan "[INFO]" prefix.
+// Arguments are handled in the manner of [fmt.Printf].
 func Infof(format string, v ...any) {
 	if !Verbose {
 		return
 	}
-	v = append(v, reset.String())
-	l.SetFlags(log.Ltime)
-	l.SetPrefix(fgBlueBright.String() + "[INFO] ")
-	l.Printf(format, v...)
+
+	logger.SetPrefix(ColorizeNoReset("[INFO] ", ColorFgCyanBright))
+	logger.Output(2, Colorize(fmt.Sprintf(format, v...), ColorFgCyanBright))
+	logger.SetPrefix("")
 }
 
+// Infoln logs an informational message with a cyan "[INFO]" prefix, followed by a newline.
+// Arguments are handled in the manner of [fmt.Println].
+func Infoln(v ...any) {
+	if !Verbose {
+		return
+	}
+
+	logger.SetPrefix(ColorizeNoReset("[INFO] ", ColorFgCyanBright))
+	logger.Output(2, Colorize(fmt.Sprintln(v...), ColorFgCyanBright))
+	logger.SetPrefix("")
+}
+
+// Warn logs a warning message with a yellow "[WARN]" prefix.
+// Arguments are handled in the manner of [fmt.Print].
+func Warn(v ...any) {
+	logger.SetPrefix(ColorizeNoReset("[WARN] ", ColorFgYellow))
+	logger.Output(2, Colorize(fmt.Sprint(v...), ColorFgYellow))
+	logger.SetPrefix("")
+}
+
+// Warnf logs a formatted warning message with a yellow "[WARN]" prefix.
+// Arguments are handled in the manner of [fmt.Printf].
+func Warnf(format string, v ...any) {
+	logger.SetPrefix(ColorizeNoReset("[WARN] ", ColorFgYellow))
+	logger.Output(2, Colorize(fmt.Sprintf(format, v...), ColorFgYellow))
+	logger.SetPrefix("")
+}
+
+// Warnln logs a warning message with a yellow "[WARN]" prefix, followed by a newline.
+// Arguments are handled in the manner of [fmt.Println].
+func Warnln(v ...any) {
+	logger.SetPrefix(ColorizeNoReset("[WARN] ", ColorFgYellow))
+	logger.Output(2, Colorize(fmt.Sprintln(v...), ColorFgYellow))
+	logger.SetPrefix("")
+}
+
+// Error logs an error message with a red "[ERROR]" prefix.
+// Arguments are handled in the manner of [fmt.Print].
 func Error(v ...any) {
-	v = append(v, reset.String())
-	if version.IsDev() {
-		l.SetFlags(log.Ltime | log.Llongfile)
-	} else {
-		l.SetFlags(0)
-	}
-	l.SetPrefix(fgRed.String() + "[ERRORE] ")
-	l.Output(2, fmt.Sprint(v...))
+	logger.SetPrefix(ColorizeNoReset("[ERROR] ", ColorFgRed))
+	logger.Output(2, Colorize(fmt.Sprint(v...), ColorFgRed))
+	logger.SetPrefix("")
 }
 
-func Errorln(v ...any) {
-	v = append(v, reset.String())
-	if version.IsDev() {
-		l.SetFlags(log.Ltime | log.Llongfile)
-	} else {
-		l.SetFlags(0)
-	}
-	l.SetPrefix(fgRed.String() + "[ERRORE] ")
-	l.Output(2, fmt.Sprintln(v...))
-}
-
+// Errorf logs a formatted error message with a red "[ERROR]" prefix.
+// Arguments are handled in the manner of [fmt.Printf].
 func Errorf(format string, v ...any) {
-	v = append(v, reset.String())
-	if version.IsDev() {
-		l.SetFlags(log.Ltime | log.Llongfile)
-	} else {
-		l.SetFlags(0)
-	}
-	l.SetPrefix(fgRed.String() + "[ERRORE] ")
-	l.Output(2, fmt.Sprintf(format, v...))
+	logger.SetPrefix(ColorizeNoReset("[ERROR] ", ColorFgRed))
+	logger.Output(2, Colorize(fmt.Sprintf(format, v...), ColorFgRed))
+	logger.SetPrefix("")
 }
 
+// Errorln logs an error message with a red "[ERROR]" prefix, followed by a newline.
+// Arguments are handled in the manner of [fmt.Println].
+func Errorln(v ...any) {
+	logger.SetPrefix(ColorizeNoReset("[ERROR] ", ColorFgRed))
+	logger.Output(2, Colorize(fmt.Sprintln(v...), ColorFgRed))
+	logger.SetPrefix("")
+}
+
+// Fatal logs a fatal message with a magenta "[FATAL]" prefix and then calls [os.Exit](1).
+// Arguments are handled in the manner of [fmt.Print].
 func Fatal(v ...any) {
-	v = append(v, reset.String())
-	if version.IsDev() {
-		l.SetFlags(log.Ltime | log.Llongfile)
-	} else {
-		l.SetFlags(0)
-	}
-	l.SetPrefix(fgRedBright.String() + "[CRITICO] ")
-	l.Output(2, fmt.Sprint(v...))
+	s := fmt.Sprint(v...)
+	logger.SetPrefix(ColorizeNoReset("[FATAL] ", ColorFgMagenta))
+	logger.Output(2, Colorize(s, ColorFgMagenta))
+	logger.SetPrefix("")
 	os.Exit(1)
 }
 
-func Fatalln(v ...any) {
-	v = append(v, reset.String())
-	if version.IsDev() {
-		l.SetFlags(log.Ltime | log.Llongfile)
-	} else {
-		l.SetFlags(0)
-	}
-	l.SetPrefix(fgRedBright.String() + "[CRITICO] ")
-	l.Output(2, fmt.Sprintln(v...))
-	os.Exit(1)
-}
-
+// Fatalf logs a formatted fatal message with a magenta "[FATAL]" prefix and then calls [os.Exit](1).
+// Arguments are handled in the manner of [fmt.Printf].
 func Fatalf(format string, v ...any) {
-	v = append(v, reset.String())
-	if version.IsDev() {
-		l.SetFlags(log.Ltime | log.Llongfile)
-	} else {
-		l.SetFlags(0)
-	}
-	l.SetPrefix(fgRedBright.String() + "[CRITICO] ")
-	l.Output(2, fmt.Sprintf(format, v...))
+	s := fmt.Sprintf(format, v...)
+	logger.SetPrefix(ColorizeNoReset("[FATAL] ", ColorFgMagenta))
+	logger.Output(2, Colorize(s, ColorFgMagenta))
+	logger.SetPrefix("")
+	os.Exit(1)
+}
+
+// Fatalln logs a fatal message with a magenta "[FATAL]" prefix, followed by a newline, and then calls os.Exit(1).
+// Arguments are handled in the manner of [fmt.Println].
+func Fatalln(v ...any) {
+	s := fmt.Sprintln(v...)
+	logger.SetPrefix(ColorizeNoReset("[FATAL] ", ColorFgMagenta))
+	logger.Output(2, Colorize(s, ColorFgMagenta))
+	logger.SetPrefix("")
 	os.Exit(1)
 }
