@@ -1,27 +1,13 @@
 # Animesaturn Downloader in Go
 <p align="center">
-    <a href="https://github.com/MrRainbow0704/animesaturnDownloaderGo/releases/latest/">
-        <img alt="Release" src="https://img.shields.io/github/v/release/MrRainbow0704/animesaturnDownloaderGo">
-    </a>
-    <a href="https://www.gnu.org/licenses/">
-        <img alt="License" src="https://img.shields.io/github/license/MrRainbow0704/animesaturnDownloaderGo">
-    </a>
-    <a href="https://github.com/MrRainbow0704/animesaturnDownloaderGo/releases/latest/">
-        <img alt="GitHub" src="https://img.shields.io/github/downloads/MrRainbow0704/animesaturnDownloaderGo/total">
-    </a>
+    <a href="https://github.com/MrRainbow0704/animesaturnDownloaderGo/releases/latest/"><img alt="Release" src="https://img.shields.io/github/v/release/MrRainbow0704/animesaturnDownloaderGo"></a>
+    <a href="https://www.gnu.org/licenses/"><img alt="License" src="https://img.shields.io/github/license/MrRainbow0704/animesaturnDownloaderGo"></a>
+    <a href="https://github.com/MrRainbow0704/animesaturnDownloaderGo/releases/latest/"><img alt="GitHub" src="https://img.shields.io/github/downloads/MrRainbow0704/animesaturnDownloaderGo/total"></a>
     <br />
-    <a href="https://go.dev/">
-        <img alt="Go" src="https://img.shields.io/badge/Go-00ADD8.svg?&logo=go&logoColor=white">
-    </a>
-    <a href="https://www.typescriptlang.org/">
-        <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=fff">
-    </a>
-    <a href="https://wails.io/">
-        <img alt="Wails" src="https://img.shields.io/badge/Wails-df0000.svg?logo=wails&logoColor=white">
-    </a>
-    <a href="https://svelte.dev/">
-        <img alt="Svelte" src="https://img.shields.io/badge/Svelte-f1413d.svg?logo=svelte&logoColor=white">
-    </a>
+    <a href="https://go.dev/"><img alt="Go" src="https://img.shields.io/badge/Go-00ADD8.svg?&logo=go&logoColor=white"></a>
+    <a href="https://www.typescriptlang.org/"><img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=fff"></a>
+    <a href="https://wails.io/"><img alt="Wails" src="https://img.shields.io/badge/Wails-df0000.svg?logo=wails&logoColor=white"></a>
+    <a href="https://svelte.dev/"><img alt="Svelte" src="https://img.shields.io/badge/Svelte-f1413d.svg?logo=svelte&logoColor=white"></a>
 </p>
 
 Questa utility permette di scaricare anime dal famoso sito Animesaturn e salvarli in formato .mp4 sul computer. Contiene una versione CLI e una con interfaccia grafica.
